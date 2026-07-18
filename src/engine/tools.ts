@@ -17,18 +17,19 @@ export const SNAP_THRESHOLD = 12
 
 export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle'
 
+// Display names are presentation and live in the view's i18n layer;
+// the engine only knows stable ids and click counts.
 export interface ToolDef {
   readonly id: ToolId
-  readonly label: string
   readonly pointsNeeded: number
 }
 
 export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
-  select: { id: 'select', label: 'Select', pointsNeeded: 0 },
-  point: { id: 'point', label: 'Point', pointsNeeded: 1 },
-  segment: { id: 'segment', label: 'Segment', pointsNeeded: 2 },
-  line: { id: 'line', label: 'Line', pointsNeeded: 2 },
-  circle: { id: 'circle', label: 'Circle', pointsNeeded: 2 },
+  select: { id: 'select', pointsNeeded: 0 },
+  point: { id: 'point', pointsNeeded: 1 },
+  segment: { id: 'segment', pointsNeeded: 2 },
+  line: { id: 'line', pointsNeeded: 2 },
+  circle: { id: 'circle', pointsNeeded: 2 },
 }
 
 export const TOOL_ORDER: readonly ToolId[] = ['select', 'point', 'segment', 'line', 'circle']

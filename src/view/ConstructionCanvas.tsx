@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { findPointNear, SNAP_THRESHOLD } from '../engine'
+import { useI18n } from '../i18n/context'
 import type { AppAction, AppState } from './appState'
 import type { Rect, XY } from './geometry'
 import { renderEntity } from './renderEntity'
@@ -23,6 +24,7 @@ function toSvgCoords(svg: SVGSVGElement, clientX: number, clientY: number): XY |
 
 export function ConstructionCanvas({ state, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const { t } = useI18n()
   const { construction, toolState, dragId } = state
 
   const eventCoords = (e: ReactPointerEvent<SVGSVGElement>): XY | null => {
@@ -72,7 +74,7 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       role="application"
-      aria-label="Construction canvas"
+      aria-label={t('canvas.aria')}
     >
       {strokes.map((ent) => renderEntity(construction, ent, opts))}
       {points.map((ent) => renderEntity(construction, ent, opts))}

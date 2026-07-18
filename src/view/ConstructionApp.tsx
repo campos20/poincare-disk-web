@@ -1,34 +1,32 @@
 import { useReducer } from "react";
 import type { ToolState } from "../engine";
+import { useI18n } from "../i18n/context";
+import type { MessageKey } from "../i18n/messages";
 import { appReducer, initialAppState } from "./appState";
 import { ConstructionCanvas } from "./ConstructionCanvas";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Toolbar } from "./Toolbar";
 import "./construction.css";
 
-function hint(toolState: ToolState): string {
+function hintKey(toolState: ToolState): MessageKey {
   const step = toolState.buffer.length;
   switch (toolState.tool) {
     case "select":
-      return "Drag a point to move it — everything built on it follows.";
+      return "hint.select";
     case "point":
-      return "Click anywhere to place a point.";
+      return "hint.point";
     case "segment":
-      return step === 0
-        ? "Segment: click the first endpoint."
-        : "Segment: click the second endpoint.";
+      return step === 0 ? "hint.segment.first" : "hint.segment.second";
     case "line":
-      return step === 0
-        ? "Line: click a first point."
-        : "Line: click a second point.";
+      return step === 0 ? "hint.line.first" : "hint.line.second";
     case "circle":
-      return step === 0
-        ? "Circle: click the center."
-        : "Circle: click a point on the circle.";
+      return step === 0 ? "hint.circle.center" : "hint.circle.thru";
   }
 }
 
 export function ConstructionApp() {
   const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
+  const { t } = useI18n();
 
   return (
     <div className="construction-app">
@@ -37,9 +35,10 @@ export function ConstructionApp() {
           active={state.toolState.tool}
           onSelect={(tool) => dispatch({ type: "setTool", tool })}
         />
+        <LanguageSwitcher />
       </header>
       <ConstructionCanvas state={state} dispatch={dispatch} />
-      <footer className="hint-bar">{hint(state.toolState)}</footer>
+      <footer className="hint-bar">{t(hintKey(state.toolState))}</footer>
     </div>
   );
 }
