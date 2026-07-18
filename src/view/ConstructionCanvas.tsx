@@ -99,7 +99,6 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      role="application"
       aria-label={t('canvas.aria')}
     >
       {/* The Poincaré disk: the space itself. Outside it, nothing exists. */}

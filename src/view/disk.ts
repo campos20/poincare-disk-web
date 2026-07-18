@@ -1,8 +1,8 @@
 import type { XY } from "./geometry";
 
 /**
- * The Poincaré disk: centered at the origin, as large as the fixed
- * 800×600 viewBox allows (min half-dimension is 300) with a small margin.
+ * The Poincaré disk: centered at the origin, sized to fit within the
+ * responsive SVG viewBox (see ConstructionCanvas.fitViewport) with a small margin.
  * Points only exist strictly inside — the boundary circle is at infinity
  * in hyperbolic geometry.
  */
