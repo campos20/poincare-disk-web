@@ -24,16 +24,19 @@ export function Toolbar({ active, onSelect }: Props) {
     <div className="toolbar" role="toolbar" aria-label={t("toolbar.aria")}>
       {TOOL_ORDER.map((id) => {
         const Icon = ICONS[id];
+        const label = t(`tool.${id}`);
         return (
           <button
             key={id}
             type="button"
             className={id === active ? "tool-button active" : "tool-button"}
             aria-pressed={id === active}
+            aria-label={label}
+            title={label}
             onClick={() => onSelect(id)}
           >
             <Icon size={16} aria-hidden />
-            <span>{t(`tool.${id}`)}</span>
+            <span>{label}</span>
           </button>
         );
       })}

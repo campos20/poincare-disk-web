@@ -10,7 +10,8 @@
 .app-header {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid #232a33;
 }
@@ -83,12 +84,23 @@
 }
 
 .construction-canvas {
+  display: block;
   flex: 1;
   width: 100%;
   min-height: 0;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  /* Outside the disk: the void beyond the hyperbolic plane. */
+  background: #090b0f;
+}
+
+/* Inside the disk: the space where constructions live. */
+.poincare-disk {
+  fill: #151b26;
+  stroke: #3a4759;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .construction-canvas.mode-build {
@@ -127,9 +139,43 @@
   cursor: grabbing;
 }
 
+/* Fixed height + single line: hint text changes with every tool/step and
+   must never resize the canvas above it. */
 .hint-bar {
-  padding: 0.45rem 1rem;
+  flex: none;
+  height: 2.2rem;
+  line-height: 2.2rem;
+  padding: 0 1rem;
   font-size: 0.85rem;
   color: #8b97a5;
   border-top: 1px solid #232a33;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact header on narrow screens: icon-only tools, everything on one row. */
+@media (max-width: 560px) {
+  .app-header {
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .toolbar {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .tool-button span {
+    display: none;
+  }
+
+  .tool-button {
+    padding: 0.45rem 0.55rem;
+  }
+
+  .hint-bar {
+    font-size: 0.8rem;
+    padding: 0 0.6rem;
+  }
 }

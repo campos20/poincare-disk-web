@@ -11,6 +11,7 @@ import {
   selectTool,
 } from '../engine'
 import type { Construction, EntityId, ToolId, ToolState } from '../engine'
+import { isInsideDisk } from './disk'
 
 export interface AppState {
   readonly construction: Construction
@@ -43,6 +44,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         dragId: null,
       }
     case 'canvasClick': {
+      // Constructions only exist inside the Poincaré disk.
+      if (!isInsideDisk(action)) return state
       const result = applyClick(state.construction, state.toolState, action.x, action.y)
       return { ...state, construction: result.construction, toolState: result.toolState }
     }
@@ -50,6 +53,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, dragId: action.id }
     case 'dragMove':
       if (state.dragId === null) return state
+      // Ignore moves outside the disk: the point freezes at its last
+      // valid position until the pointer re-enters.
+      if (!isInsideDisk(action)) return state
       return {
         ...state,
         construction: movePoint(state.construction, state.dragId, action.x, action.y),
