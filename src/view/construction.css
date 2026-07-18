@@ -1,0 +1,106 @@
+.construction-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: #0e1116;
+  color: #dbe2ea;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #232a33;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8b97a5;
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tool-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #b8c2cd;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tool-button:hover {
+  background: #1a212b;
+}
+
+.tool-button.active {
+  color: #eaf1f8;
+  background: #1f2937;
+  border-color: #384354;
+}
+
+.construction-canvas {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.construction-canvas.mode-build {
+  cursor: crosshair;
+}
+
+.construction-canvas.mode-select {
+  cursor: default;
+}
+
+.ent-stroke {
+  fill: none;
+  stroke: #7fa7d4;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ent-line {
+  stroke: #5f7ea6;
+  stroke-dasharray: none;
+}
+
+.ent-point {
+  fill: #e8b45a;
+  stroke: #0e1116;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+
+.ent-point.buffered {
+  fill: #6ee7b7;
+}
+
+.ent-point.dragging {
+  fill: #f4d06f;
+  cursor: grabbing;
+}
+
+.hint-bar {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  color: #8b97a5;
+  border-top: 1px solid #232a33;
+}

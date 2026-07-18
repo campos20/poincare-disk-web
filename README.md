@@ -1,75 +1,44 @@
-# React + TypeScript + Vite
+# Poincaré Disk — Constructions
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive geometry tool (GeoGebra/Desmos-inspired). Constructions are
+currently rendered in Euclidean geometry; the goal is to swap the rendering to
+the Poincaré disk (hyperbolic geometry) without touching the engine, tools, or
+interaction code.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **`src/engine/`** — framework-agnostic TypeScript, zero React imports: the
+  object model, construction state, snapping, and the tool state machines.
+  Only points carry coordinates; every other entity references point ids, so
+  dragging a point updates all dependents at render time for free. Derived
+  points (intersections, midpoints) and a dependency DAG slot in here later —
+  see the comments in `engine/types.ts` and `engine/construction.ts`.
+- **`src/view/`** — React + SVG. All Euclidean geometry lives in
+  [`src/view/geometry.ts`](src/view/geometry.ts), marked as the **swap point**:
+  replacing those pure functions with Poincaré equations (geodesic arcs,
+  offset-center circles) is the entire hyperbolic migration.
+- **`src/routes/`** — TanStack Router file-based routes; the canvas is the
+  index route.
 
-## React Compiler
+## Develop
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm install
+npm run dev       # dev server (serves under /poincare-disk-web/)
+npm test          # engine + geometry unit tests (vitest)
+npm run build     # typecheck + production build
+npm run preview   # serve the production build locally
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Deployment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Pushes to `master` deploy to GitHub Pages via
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+<https://campos20.github.io/poincare-disk-web/>
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+**SPA routing under Pages:** GitHub Pages has no server-side fallback, so a
+refresh or deep link to a non-root route would 404. The workflow copies
+`dist/index.html` to `dist/404.html`, so Pages serves the app shell for unknown
+paths and TanStack Router (configured with `basepath: import.meta.env.BASE_URL`)
+resolves the route client-side. This keeps clean URLs, needs no code changes,
+and is the simplest fix for a single-page app on Pages.
