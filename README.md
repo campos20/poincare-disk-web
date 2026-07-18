@@ -1,68 +1,44 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Poincaré Disk — Constructions
 
-## Available Scripts
+An interactive geometry tool (GeoGebra/Desmos-inspired). Constructions are
+currently rendered in Euclidean geometry; the goal is to swap the rendering to
+the Poincaré disk (hyperbolic geometry) without touching the engine, tools, or
+interaction code.
 
-In the project directory, you can run:
+## Architecture
 
-### `yarn start`
+- **`src/engine/`** — framework-agnostic TypeScript, zero React imports: the
+  object model, construction state, snapping, and the tool state machines.
+  Only points carry coordinates; every other entity references point ids, so
+  dragging a point updates all dependents at render time for free. Derived
+  points (intersections, midpoints) and a dependency DAG slot in here later —
+  see the comments in `engine/types.ts` and `engine/construction.ts`.
+- **`src/view/`** — React + SVG. All Euclidean geometry lives in
+  [`src/view/geometry.ts`](src/view/geometry.ts), marked as the **swap point**:
+  replacing those pure functions with Poincaré equations (geodesic arcs,
+  offset-center circles) is the entire hyperbolic migration.
+- **`src/routes/`** — TanStack Router file-based routes; the canvas is the
+  index route.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Develop
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+```sh
+npm install
+npm run dev       # dev server (serves under /poincare-disk-web/)
+npm test          # engine + geometry unit tests (vitest)
+npm run build     # typecheck + production build
+npm run preview   # serve the production build locally
+```
 
-### `yarn test`
+## Deployment
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Pushes to `master` deploy to GitHub Pages via
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+<https://campos20.github.io/poincare-disk-web/>
 
-### `yarn build`
-
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `yarn eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `yarn build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+**SPA routing under Pages:** GitHub Pages has no server-side fallback, so a
+refresh or deep link to a non-root route would 404. The workflow copies
+`dist/index.html` to `dist/404.html`, so Pages serves the app shell for unknown
+paths and TanStack Router (configured with `basepath: import.meta.env.BASE_URL`)
+resolves the route client-side. This keeps clean URLs, needs no code changes,
+and is the simplest fix for a single-page app on Pages.

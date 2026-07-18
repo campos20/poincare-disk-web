@@ -1,0 +1,181 @@
+.construction-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: #0e1116;
+  color: #dbe2ea;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #232a33;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8b97a5;
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tool-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #b8c2cd;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tool-button:hover {
+  background: #1a212b;
+}
+
+.tool-button.active {
+  color: #eaf1f8;
+  background: #1f2937;
+  border-color: #384354;
+}
+
+.lang-switch {
+  display: flex;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.lang-button {
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #8b97a5;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lang-button:hover {
+  background: #1a212b;
+}
+
+.lang-button.active {
+  color: #eaf1f8;
+  background: #1f2937;
+  border-color: #384354;
+}
+
+.construction-canvas {
+  display: block;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Outside the disk: the void beyond the hyperbolic plane. */
+  background: #090b0f;
+}
+
+/* Inside the disk: the space where constructions live. */
+.poincare-disk {
+  fill: #151b26;
+  stroke: #3a4759;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.construction-canvas.mode-build {
+  cursor: crosshair;
+}
+
+.construction-canvas.mode-select {
+  cursor: default;
+}
+
+.ent-stroke {
+  fill: none;
+  stroke: #7fa7d4;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ent-line {
+  stroke: #5f7ea6;
+  stroke-dasharray: none;
+}
+
+.ent-point {
+  fill: #e8b45a;
+  stroke: #0e1116;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+
+.ent-point.buffered {
+  fill: #6ee7b7;
+}
+
+.ent-point.dragging {
+  fill: #f4d06f;
+  cursor: grabbing;
+}
+
+/* Fixed height + single line: hint text changes with every tool/step and
+   must never resize the canvas above it. */
+.hint-bar {
+  flex: none;
+  height: 2.2rem;
+  line-height: 2.2rem;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  color: #8b97a5;
+  border-top: 1px solid #232a33;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact header on narrow screens: icon-only tools, everything on one row. */
+@media (max-width: 560px) {
+  .app-header {
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .toolbar {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .tool-button span {
+    display: none;
+  }
+
+  .tool-button {
+    padding: 0.45rem 0.55rem;
+  }
+
+  .hint-bar {
+    font-size: 0.8rem;
+    padding: 0 0.6rem;
+  }
+}
