@@ -32,7 +32,7 @@ npm run preview   # serve the production build locally
 
 ## Deployment
 
-Pushes to `master` deploy to GitHub Pages via
+Pushes to `main` deploy to GitHub Pages via
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
 <https://campos20.github.io/poincare-disk-web/>
 
