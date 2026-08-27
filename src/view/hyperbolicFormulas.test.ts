@@ -3,6 +3,7 @@ import {
   distanceFromOrigin,
   hyperbolicCircleThroughPoints,
   hyperbolicLineThroughPoints,
+  hyperbolicSegmentThroughPoints,
   orthogonalCircleThroughPoints,
 } from './hyperbolicFormulas'
 
@@ -103,6 +104,66 @@ describe('hyperbolicLineThroughPoints', () => {
 
   it('returns null when A and B coincide', () => {
     expect(hyperbolicLineThroughPoints({ x: 0.2, y: 0.3 }, { x: 0.2, y: 0.3 })).toBeNull()
+  })
+})
+
+describe('hyperbolicSegmentThroughPoints', () => {
+  it('runs endpoint-to-endpoint (not out to the boundary) on the same circle as the full geodesic', () => {
+    const a = { x: 0.5, y: 0 }
+    const b = { x: 0, y: 0.5 }
+    const shape = hyperbolicSegmentThroughPoints(a, b)
+    if (!shape || shape.kind !== 'arc') throw new Error('expected an arc')
+
+    expect(shape.p1).toEqual(a)
+    expect(shape.p2).toEqual(b)
+
+    const circle = orthogonalCircleThroughPoints(a, b)!
+    expect(shape.r).toBeCloseTo(circle.r)
+  })
+
+  it('stays inside the disk and is a sub-arc of the full geodesic (same circle, smaller span)', () => {
+    const a = { x: 0.6, y: 0.1 }
+    const b = { x: -0.2, y: 0.7 }
+    const segment = hyperbolicSegmentThroughPoints(a, b)
+    const line = hyperbolicLineThroughPoints(a, b)
+    if (!segment || segment.kind !== 'arc') throw new Error('expected an arc')
+    if (!line || line.kind !== 'arc') throw new Error('expected an arc')
+
+    const circle = orthogonalCircleThroughPoints(a, b)!
+    const angleFrom = (p: { x: number; y: number }) => Math.atan2(p.y - circle.cy, p.x - circle.cx)
+    const twoPi = 2 * Math.PI
+    const normalize = (theta: number) => ((theta % twoPi) + twoPi) % twoPi
+
+    const segSpan = normalize(
+      segment.sweep
+        ? angleFrom(segment.p2) - angleFrom(segment.p1)
+        : angleFrom(segment.p1) - angleFrom(segment.p2),
+    )
+    const lineSpan = normalize(
+      line.sweep ? angleFrom(line.p2) - angleFrom(line.p1) : angleFrom(line.p1) - angleFrom(line.p2),
+    )
+    expect(segSpan).toBeLessThan(lineSpan)
+
+    let maxDistFromOrigin = 0
+    const steps = 200
+    const theta1 = angleFrom(segment.p1)
+    const direction = segment.sweep ? 1 : -1
+    for (let i = 0; i <= steps; i++) {
+      const theta = theta1 + direction * segSpan * (i / steps)
+      const p = { x: circle.cx + circle.r * Math.cos(theta), y: circle.cy + circle.r * Math.sin(theta) }
+      maxDistFromOrigin = Math.max(maxDistFromOrigin, distanceFromOrigin(p))
+    }
+    expect(maxDistFromOrigin).toBeLessThanOrEqual(1 + 1e-9)
+  })
+
+  it('returns the straight segment A→B when A, B and the origin are collinear', () => {
+    const a = { x: 0.3, y: 0 }
+    const b = { x: 0.6, y: 0 }
+    expect(hyperbolicSegmentThroughPoints(a, b)).toEqual({ kind: 'diameter', p1: a, p2: b })
+  })
+
+  it('returns null when A and B coincide', () => {
+    expect(hyperbolicSegmentThroughPoints({ x: 0.2, y: 0.3 }, { x: 0.2, y: 0.3 })).toBeNull()
   })
 })
 

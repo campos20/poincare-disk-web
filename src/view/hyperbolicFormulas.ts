@@ -157,3 +157,45 @@ export function hyperbolicLineThroughPoints(a: XY, b: XY): HyperbolicLine | null
 
   return { kind: 'arc', p1, p2, r: circle.r, largeArc: span > Math.PI, sweep }
 }
+
+/**
+ * The hyperbolic segment between A and B: the part of the geodesic through
+ * them (see `hyperbolicLineThroughPoints`) that lies between the two points
+ * themselves, rather than extended out to the disk boundary — an arc of the
+ * same orthogonal circle, just the piece from A to B instead of the piece
+ * from boundary to boundary. The full geodesic line always contains this
+ * segment.
+ *
+ * Of the two arcs from A to B around that circle, one stays inside the disk
+ * and the other bulges out past the boundary; picking the one whose
+ * midpoint is still inside the disk (distance from the origin under 1)
+ * selects the right one without needing the boundary intersections at all.
+ *
+ * Falls back to the straight segment between A and B when A, B and the
+ * origin are collinear, matching the diameter case of the full geodesic.
+ *
+ * Returns null when A and B coincide — a segment needs two distinct points.
+ */
+export function hyperbolicSegmentThroughPoints(a: XY, b: XY): HyperbolicLine | null {
+  if (a.x === b.x && a.y === b.y) return null
+
+  const circle = orthogonalCircleThroughPoints(a, b)
+  if (!circle) return { kind: 'diameter', p1: a, p2: b }
+
+  const angleFrom = (p: XY): number => Math.atan2(p.y - circle.cy, p.x - circle.cx)
+  const twoPi = 2 * Math.PI
+  const normalize = (theta: number): number => ((theta % twoPi) + twoPi) % twoPi
+
+  const thetaA = angleFrom(a)
+  const spanCCW = normalize(angleFrom(b) - thetaA)
+  const midTheta = thetaA + spanCCW / 2
+  const mid: XY = {
+    x: circle.cx + circle.r * Math.cos(midTheta),
+    y: circle.cy + circle.r * Math.sin(midTheta),
+  }
+
+  const sweep = distanceFromOrigin(mid) < 1
+  const span = sweep ? spanCCW : twoPi - spanCCW
+
+  return { kind: 'arc', p1: a, p2: b, r: circle.r, largeArc: span > Math.PI, sweep }
+}

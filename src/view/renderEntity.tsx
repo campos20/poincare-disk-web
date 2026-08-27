@@ -9,8 +9,12 @@ import { getPoint } from '../engine'
 import type { Construction, Entity, EntityId } from '../engine'
 import { DISK_RADIUS, toScreen } from './disk'
 import { segmentShape } from './geometry'
-import type { XY } from './geometry'
-import { hyperbolicCircleThroughPoints, hyperbolicLineThroughPoints } from './hyperbolicFormulas'
+import type { HyperbolicLine } from './hyperbolicFormulas'
+import {
+  hyperbolicCircleThroughPoints,
+  hyperbolicLineThroughPoints,
+  hyperbolicSegmentThroughPoints,
+} from './hyperbolicFormulas'
 
 export interface RenderOptions {
   /** Point ids buffered by the active tool (highlighted). */
@@ -25,6 +29,16 @@ function pointClass(id: EntityId, opts: RenderOptions): string {
   return 'ent-point'
 }
 
+/** SVG path `d` for a hyperbolic line/segment shape, scaled to screen space. */
+function hyperbolicPath(shape: HyperbolicLine): string {
+  const p1 = toScreen(shape.p1)
+  const p2 = toScreen(shape.p2)
+  if (shape.kind === 'diameter') return segmentShape(p1, p2)
+  return `M ${p1.x} ${p1.y} A ${shape.r * DISK_RADIUS} ${shape.r * DISK_RADIUS} 0 ${
+    shape.largeArc ? 1 : 0
+  } ${shape.sweep ? 1 : 0} ${p2.x} ${p2.y}`
+}
+
 /**
  * Render one entity from its referenced points' CURRENT coordinates.
  * Returns null when a reference is unresolvable or the shape is off-screen.
@@ -34,14 +48,6 @@ export function renderEntity(
   entity: Entity,
   opts: RenderOptions,
 ): ReactNode {
-  // Points are stored in unit-disk model coordinates; screen space is a
-  // view-only concern, so every point is converted here before it reaches
-  // an SVG attribute or a geometry.ts function (which stay in screen space).
-  const at = (id: EntityId): XY | null => {
-    const p = getPoint(construction, id)
-    return p ? toScreen(p) : null
-  }
-
   switch (entity.kind) {
     case 'point': {
       const p = toScreen(entity)
@@ -57,30 +63,23 @@ export function renderEntity(
       )
     }
     case 'segment': {
-      const a = at(entity.a)
-      const b = at(entity.b)
+      // The formulas assume a true radius-1 disk, so these need the raw
+      // model points, not screen-scaled ones — the resulting shape is
+      // scaled to screen afterward instead.
+      const a = getPoint(construction, entity.a)
+      const b = getPoint(construction, entity.b)
       if (!a || !b) return null
-      return <path key={entity.id} className="ent-stroke" d={segmentShape(a, b)} />
+      const shape = hyperbolicSegmentThroughPoints(a, b)
+      if (!shape) return null
+      return <path key={entity.id} className="ent-stroke" d={hyperbolicPath(shape)} />
     }
     case 'line': {
-      // Orthogonality to the unit circle is baked into the formula, so this
-      // one needs the raw model points, not the screen-scaled ones `at`
-      // gives everything else — the shape it returns is scaled to screen
-      // afterward instead.
       const a = getPoint(construction, entity.a)
       const b = getPoint(construction, entity.b)
       if (!a || !b) return null
       const shape = hyperbolicLineThroughPoints(a, b)
       if (!shape) return null
-      const p1 = toScreen(shape.p1)
-      const p2 = toScreen(shape.p2)
-      const d =
-        shape.kind === 'diameter'
-          ? segmentShape(p1, p2)
-          : `M ${p1.x} ${p1.y} A ${shape.r * DISK_RADIUS} ${shape.r * DISK_RADIUS} 0 ${
-              shape.largeArc ? 1 : 0
-            } ${shape.sweep ? 1 : 0} ${p2.x} ${p2.y}`
-      return <path key={entity.id} className="ent-stroke ent-line" d={d} />
+      return <path key={entity.id} className="ent-stroke ent-line" d={hyperbolicPath(shape)} />
     }
     case 'circle': {
       // Like the line case, the formula assumes a true radius-1 disk, so it
