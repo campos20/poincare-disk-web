@@ -54,6 +54,64 @@
   border-color: #384354;
 }
 
+.tool-group {
+  position: relative;
+}
+
+.tool-group-caret {
+  margin-left: 0.05rem;
+  color: #6b7684;
+}
+
+.tool-menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 9rem;
+  padding: 0.3rem;
+  background: #161b22;
+  border: 1px solid #2a323d;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Anchor the last group's menu to the right so it doesn't overflow past
+   the toolbar's edge on narrow screens. */
+.tool-group:last-child .tool-menu {
+  left: auto;
+  right: 0;
+}
+
+.tool-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #b8c2cd;
+  white-space: nowrap;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tool-menu-item:hover {
+  background: #1a212b;
+}
+
+.tool-menu-item.active {
+  color: #eaf1f8;
+  background: #1f2937;
+  border-color: #384354;
+}
+
 .lang-switch {
   display: flex;
   gap: 0.15rem;
