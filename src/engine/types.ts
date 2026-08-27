@@ -9,8 +9,18 @@
 
 export type EntityId = string
 
+/**
+ * Style/visibility shared by every entity kind. `color: null` means "use the
+ * default palette color for this kind"; a hex string is an explicit
+ * per-object override, same as GeoGebra's object color.
+ */
+export interface EntityStyle {
+  readonly color: string | null
+  readonly hidden: boolean
+}
+
 /** A free point: user-placed, draggable, owns its coordinates. */
-export interface FreePoint {
+export interface FreePoint extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'point'
   readonly x: number
@@ -27,7 +37,7 @@ export interface FreePoint {
 export type PointEntity = FreePoint
 
 /** Straight segment between two points. */
-export interface Segment {
+export interface Segment extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'segment'
   readonly a: EntityId
@@ -35,7 +45,7 @@ export interface Segment {
 }
 
 /** Infinite line through two points. */
-export interface Line {
+export interface Line extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'line'
   readonly a: EntityId
@@ -43,7 +53,7 @@ export interface Line {
 }
 
 /** Circle centered at `center`, passing through `thru`. */
-export interface Circle {
+export interface Circle extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'circle'
   readonly center: EntityId

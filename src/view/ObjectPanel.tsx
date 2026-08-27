@@ -1,4 +1,14 @@
-import { ChevronLeft, ChevronRight, Circle, Dot, Minus, Slash } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Dot,
+  Eye,
+  EyeOff,
+  Minus,
+  Slash,
+  Trash2,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Construction, Entity, EntityId } from "../engine";
 import { useI18n } from "../i18n/context";
@@ -18,6 +28,9 @@ const KIND_LABEL: Record<Exclude<Entity["kind"], "point">, MessageKey> = {
   circle: "object.circle",
 };
 
+/** Swatches offered for object color; matches the app's existing accents. */
+const PALETTE = ["#e8b45a", "#7fa7d4", "#6ee7b7", "#f4708a", "#c792ea", "#eaf1f8"] as const;
+
 function objectLabel(
   entity: Entity,
   names: ReadonlyMap<EntityId, string>,
@@ -32,10 +45,24 @@ function objectLabel(
 interface Props {
   readonly construction: Construction;
   readonly collapsed: boolean;
+  readonly selectedId: EntityId | null;
   readonly onToggle: () => void;
+  readonly onSelect: (id: EntityId) => void;
+  readonly onSetColor: (id: EntityId, color: string | null) => void;
+  readonly onToggleHidden: (id: EntityId) => void;
+  readonly onDelete: (id: EntityId) => void;
 }
 
-export function ObjectPanel({ construction, collapsed, onToggle }: Props) {
+export function ObjectPanel({
+  construction,
+  collapsed,
+  selectedId,
+  onToggle,
+  onSelect,
+  onSetColor,
+  onToggleHidden,
+  onDelete,
+}: Props) {
   const { t } = useI18n();
   const names = pointNames(construction);
   const entities = construction.order.map((id) => construction.entities[id]);
@@ -63,10 +90,79 @@ export function ObjectPanel({ construction, collapsed, onToggle }: Props) {
           {entities.length === 0 && <li className="object-empty">{t("panel.empty")}</li>}
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
+            const selected = entity.id === selectedId;
+            const itemClass = [
+              "object-item",
+              selected && "selected",
+              entity.hidden && "hidden-entity",
+            ]
+              .filter(Boolean)
+              .join(" ");
             return (
-              <li key={entity.id} className="object-item">
-                <Icon size={14} aria-hidden className={`object-icon object-icon-${entity.kind}`} />
-                <span>{objectLabel(entity, names, t)}</span>
+              <li key={entity.id} className={itemClass}>
+                <button
+                  type="button"
+                  className="object-row"
+                  aria-pressed={selected}
+                  onClick={() => onSelect(entity.id)}
+                >
+                  <Icon
+                    size={14}
+                    aria-hidden
+                    className={`object-icon object-icon-${entity.kind}`}
+                    style={entity.color ? { color: entity.color } : undefined}
+                  />
+                  <span className="object-label">{objectLabel(entity, names, t)}</span>
+                </button>
+                <div className="object-actions">
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={t(entity.hidden ? "panel.show" : "panel.hide")}
+                    aria-pressed={entity.hidden}
+                    onClick={() => onToggleHidden(entity.id)}
+                  >
+                    {entity.hidden ? (
+                      <EyeOff size={14} aria-hidden />
+                    ) : (
+                      <Eye size={14} aria-hidden />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={t("panel.delete")}
+                    onClick={() => onDelete(entity.id)}
+                  >
+                    <Trash2 size={14} aria-hidden />
+                  </button>
+                </div>
+                {selected && (
+                  <div className="object-colors">
+                    {PALETTE.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={
+                          entity.color === color ? "color-swatch active" : "color-swatch"
+                        }
+                        style={{ background: color }}
+                        aria-label={color}
+                        aria-pressed={entity.color === color}
+                        onClick={() => onSetColor(entity.id, color)}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      className="color-swatch color-swatch-reset"
+                      aria-label={t("panel.colorReset")}
+                      aria-pressed={entity.color === null}
+                      onClick={() => onSetColor(entity.id, null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}

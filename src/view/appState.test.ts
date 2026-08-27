@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allPoints, getPoint } from "../engine";
+import { addFreePoint, addSegment, allPoints, emptyConstruction, getPoint } from "../engine";
 import { appReducer, initialAppState } from "./appState";
 import type { AppState } from "./appState";
 import { isInsideDisk } from "./disk";
@@ -46,5 +46,66 @@ describe("disk boundary guard", () => {
     // Pointer comes back inside: dragging resumes.
     state = appReducer(state, { type: "dragMove", x: -0.2, y: 0.3 });
     expect(getPoint(state.construction, id)).toMatchObject({ x: -0.2, y: 0.3 });
+  });
+});
+
+describe("object panel actions", () => {
+  it("selectObject toggles the selection on and off", () => {
+    const p = addFreePoint(emptyConstruction(), 0, 0);
+    let state: AppState = { ...initialAppState(), construction: p.construction };
+
+    state = appReducer(state, { type: "selectObject", id: p.id });
+    expect(state.selectedId).toBe(p.id);
+
+    state = appReducer(state, { type: "selectObject", id: p.id });
+    expect(state.selectedId).toBeNull();
+  });
+
+  it("setColor updates the entity's color override", () => {
+    const p = addFreePoint(emptyConstruction(), 0, 0);
+    const state: AppState = { ...initialAppState(), construction: p.construction };
+
+    const after = appReducer(state, { type: "setColor", id: p.id, color: "#ff0000" });
+    expect(after.construction.entities[p.id]).toMatchObject({ color: "#ff0000" });
+  });
+
+  it("toggleHidden flips visibility", () => {
+    const p = addFreePoint(emptyConstruction(), 0, 0);
+    const state: AppState = { ...initialAppState(), construction: p.construction };
+
+    const hidden = appReducer(state, { type: "toggleHidden", id: p.id });
+    expect(hidden.construction.entities[p.id]).toMatchObject({ hidden: true });
+
+    const shown = appReducer(hidden, { type: "toggleHidden", id: p.id });
+    expect(shown.construction.entities[p.id]).toMatchObject({ hidden: false });
+  });
+
+  it("deleteObject removes the entity and clears a matching selection", () => {
+    const p = addFreePoint(emptyConstruction(), 0, 0);
+    const state: AppState = {
+      ...initialAppState(),
+      construction: p.construction,
+      selectedId: p.id,
+    };
+
+    const after = appReducer(state, { type: "deleteObject", id: p.id });
+    expect(getPoint(after.construction, p.id)).toBeNull();
+    expect(after.selectedId).toBeNull();
+  });
+
+  it("deleteObject cascade clears selection pointing at a dependent entity", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const seg = addSegment(p2.construction, p1.id, p2.id);
+    const state: AppState = {
+      ...initialAppState(),
+      construction: seg.construction,
+      selectedId: seg.id,
+    };
+
+    // Deleting p1 cascades to remove the segment built on it.
+    const after = appReducer(state, { type: "deleteObject", id: p1.id });
+    expect(after.construction.entities[seg.id]).toBeUndefined();
+    expect(after.selectedId).toBeNull();
   });
 });

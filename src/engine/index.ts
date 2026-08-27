@@ -3,6 +3,7 @@ export type {
   Construction,
   Entity,
   EntityId,
+  EntityStyle,
   FreePoint,
   Line,
   PointEntity,
@@ -15,10 +16,13 @@ export {
   addLine,
   addSegment,
   allPoints,
+  deleteEntity,
   emptyConstruction,
   findPointNear,
   getPoint,
   movePoint,
+  setColor,
+  setHidden,
 } from './construction'
 export type { AcquireResult, AddResult } from './construction'
 export {

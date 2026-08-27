@@ -4,10 +4,13 @@ import {
   addFreePoint,
   addSegment,
   allPoints,
+  deleteEntity,
   emptyConstruction,
   findPointNear,
   getPoint,
   movePoint,
+  setColor,
+  setHidden,
 } from './construction'
 
 describe('construction basics', () => {
@@ -99,5 +102,92 @@ describe('dragging', () => {
     // …and resolving them yields the updated position.
     expect(getPoint(moved, segment.a)).toMatchObject({ x: -40, y: 25 })
     expect(getPoint(moved, segment.b)).toMatchObject({ x: 10, y: 0 })
+  })
+})
+
+describe('new entities default to visible with no color override', () => {
+  it('points and segments start with color null and hidden false', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const seg = addSegment(p2.construction, p1.id, p2.id)
+
+    expect(seg.construction.entities[p1.id]).toMatchObject({ color: null, hidden: false })
+    expect(seg.construction.entities[seg.id]).toMatchObject({ color: null, hidden: false })
+  })
+})
+
+describe('setColor', () => {
+  it('sets an explicit color override', () => {
+    const { construction, id } = addFreePoint(emptyConstruction(), 0, 0)
+    const colored = setColor(construction, id, '#ff0000')
+    expect(getPoint(colored, id)).toMatchObject({ color: '#ff0000' })
+  })
+
+  it('clears the override back to null', () => {
+    const { construction, id } = addFreePoint(emptyConstruction(), 0, 0)
+    const colored = setColor(construction, id, '#ff0000')
+    const cleared = setColor(colored, id, null)
+    expect(getPoint(cleared, id)).toMatchObject({ color: null })
+  })
+
+  it('ignores unknown ids', () => {
+    const c = emptyConstruction()
+    expect(setColor(c, 'nope', '#ff0000')).toBe(c)
+  })
+})
+
+describe('setHidden', () => {
+  it('toggles visibility without removing the entity', () => {
+    const { construction, id } = addFreePoint(emptyConstruction(), 0, 0)
+    const hidden = setHidden(construction, id, true)
+    expect(getPoint(hidden, id)).toMatchObject({ hidden: true })
+    expect(allPoints(hidden)).toHaveLength(1)
+  })
+
+  it('ignores unknown ids', () => {
+    const c = emptyConstruction()
+    expect(setHidden(c, 'nope', true)).toBe(c)
+  })
+})
+
+describe('deleteEntity', () => {
+  it('removes a standalone point', () => {
+    const { construction, id } = addFreePoint(emptyConstruction(), 0, 0)
+    const after = deleteEntity(construction, id)
+    expect(getPoint(after, id)).toBeNull()
+    expect(allPoints(after)).toHaveLength(0)
+  })
+
+  it('removes a non-point entity without touching its points', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const seg = addSegment(p2.construction, p1.id, p2.id)
+
+    const after = deleteEntity(seg.construction, seg.id)
+    expect(after.entities[seg.id]).toBeUndefined()
+    expect(getPoint(after, p1.id)).not.toBeNull()
+    expect(getPoint(after, p2.id)).not.toBeNull()
+  })
+
+  it('cascades: deleting a point removes every entity built on it', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const p3 = addFreePoint(p2.construction, 5, 5)
+    const seg = addSegment(p3.construction, p1.id, p2.id)
+    const circle = addSegment(seg.construction, p1.id, p3.id)
+
+    const after = deleteEntity(circle.construction, p1.id)
+
+    expect(getPoint(after, p1.id)).toBeNull()
+    expect(after.entities[seg.id]).toBeUndefined()
+    expect(after.entities[circle.id]).toBeUndefined()
+    // The uninvolved point survives.
+    expect(getPoint(after, p2.id)).not.toBeNull()
+    expect(getPoint(after, p3.id)).not.toBeNull()
+  })
+
+  it('ignores unknown ids', () => {
+    const c = emptyConstruction()
+    expect(deleteEntity(c, 'nope')).toBe(c)
   })
 })

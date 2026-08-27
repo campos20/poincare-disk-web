@@ -43,7 +43,12 @@ export function ConstructionApp() {
         <ObjectPanel
           construction={state.construction}
           collapsed={panelCollapsed}
+          selectedId={state.selectedId}
           onToggle={() => setPanelCollapsed((c) => !c)}
+          onSelect={(id) => dispatch({ type: "selectObject", id })}
+          onSetColor={(id, color) => dispatch({ type: "setColor", id, color })}
+          onToggleHidden={(id) => dispatch({ type: "toggleHidden", id })}
+          onDelete={(id) => dispatch({ type: "deleteObject", id })}
         />
         <ConstructionCanvas state={state} dispatch={dispatch} />
       </div>

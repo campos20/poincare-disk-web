@@ -5,10 +5,13 @@
 
 import {
   applyClick,
+  deleteEntity,
   emptyConstruction,
   initialToolState,
   movePoint,
   selectTool,
+  setColor,
+  setHidden,
 } from '../engine'
 import type { Construction, EntityId, ToolId, ToolState } from '../engine'
 import { isInsideDisk } from './disk'
@@ -18,6 +21,8 @@ export interface AppState {
   readonly toolState: ToolState
   /** Point currently being dragged (select tool), or null. */
   readonly dragId: EntityId | null
+  /** Object selected in the left panel, or null. */
+  readonly selectedId: EntityId | null
 }
 
 export type AppAction =
@@ -26,13 +31,23 @@ export type AppAction =
   | { type: 'dragStart'; id: EntityId }
   | { type: 'dragMove'; x: number; y: number }
   | { type: 'dragEnd' }
+  | { type: 'selectObject'; id: EntityId }
+  | { type: 'setColor'; id: EntityId; color: string | null }
+  | { type: 'toggleHidden'; id: EntityId }
+  | { type: 'deleteObject'; id: EntityId }
 
 export function initialAppState(): AppState {
   return {
     construction: emptyConstruction(),
     toolState: initialToolState(),
     dragId: null,
+    selectedId: null,
   }
+}
+
+/** True once `id` no longer resolves to an entity in `construction`. */
+function isGone(construction: Construction, id: EntityId | null): boolean {
+  return id !== null && !(id in construction.entities)
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -62,5 +77,30 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     case 'dragEnd':
       return { ...state, dragId: null }
+    case 'selectObject':
+      return { ...state, selectedId: state.selectedId === action.id ? null : action.id }
+    case 'setColor':
+      return { ...state, construction: setColor(state.construction, action.id, action.color) }
+    case 'toggleHidden': {
+      const e = state.construction.entities[action.id]
+      if (!e) return state
+      return { ...state, construction: setHidden(state.construction, action.id, !e.hidden) }
+    }
+    case 'deleteObject': {
+      const construction = deleteEntity(state.construction, action.id)
+      return {
+        ...state,
+        construction,
+        // Deleting a point cascades to whatever was built on it, so drop
+        // any reference (selection, drag, in-progress tool buffer) that
+        // pointed at something the cascade just removed.
+        selectedId: isGone(construction, state.selectedId) ? null : state.selectedId,
+        dragId: isGone(construction, state.dragId) ? null : state.dragId,
+        toolState: {
+          ...state.toolState,
+          buffer: state.toolState.buffer.filter((id) => !isGone(construction, id)),
+        },
+      }
+    }
   }
 }

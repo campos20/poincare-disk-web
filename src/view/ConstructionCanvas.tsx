@@ -38,7 +38,7 @@ function toSvgCoords(svg: SVGSVGElement, clientX: number, clientY: number): XY |
 export function ConstructionCanvas({ state, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const { t } = useI18n()
-  const { construction, toolState, dragId } = state
+  const { construction, toolState, dragId, selectedId } = state
   const [viewport, setViewport] = useState<Rect>(() => fitViewport(4, 3))
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
 
   const highlighted = new Set(toolState.buffer)
   const names = pointNames(construction)
-  const opts = { highlighted, dragId, names }
+  const opts = { highlighted, dragId, names, selectedId }
 
   // Strokes first, points on top, so points stay grabbable.
   const entities = state.construction.order.map((id) => construction.entities[id])

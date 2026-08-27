@@ -28,19 +28,19 @@ function withEntity(c: Construction, make: (id: EntityId) => Entity): AddResult 
 }
 
 export function addFreePoint(c: Construction, x: number, y: number): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'point', x, y }))
+  return withEntity(c, (id) => ({ id, kind: 'point', x, y, color: null, hidden: false }))
 }
 
 export function addSegment(c: Construction, a: EntityId, b: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'segment', a, b }))
+  return withEntity(c, (id) => ({ id, kind: 'segment', a, b, color: null, hidden: false }))
 }
 
 export function addLine(c: Construction, a: EntityId, b: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'line', a, b }))
+  return withEntity(c, (id) => ({ id, kind: 'line', a, b, color: null, hidden: false }))
 }
 
 export function addCircle(c: Construction, center: EntityId, thru: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'circle', center, thru }))
+  return withEntity(c, (id) => ({ id, kind: 'circle', center, thru, color: null, hidden: false }))
 }
 
 /** Resolve a point id to its current entity, or null if absent / not a point. */
@@ -111,4 +111,44 @@ export function acquirePoint(
   const near = findPointNear(c, x, y, threshold)
   if (near !== null) return { construction: c, id: near, created: false }
   return { ...addFreePoint(c, x, y), created: true }
+}
+
+/** Set (or clear, with `null`) an entity's explicit color override. */
+export function setColor(c: Construction, id: EntityId, color: string | null): Construction {
+  const e = c.entities[id]
+  if (!e) return c
+  return { ...c, entities: { ...c.entities, [id]: { ...e, color } } }
+}
+
+/** Show or hide an entity on the canvas without deleting it. */
+export function setHidden(c: Construction, id: EntityId, hidden: boolean): Construction {
+  const e = c.entities[id]
+  if (!e) return c
+  return { ...c, entities: { ...c.entities, [id]: { ...e, hidden } } }
+}
+
+/**
+ * Delete an entity. Deleting a point cascades to every segment/line/circle
+ * that references it — those can't exist without their defining points —
+ * since nothing else in the model references a non-point entity, one pass
+ * is enough.
+ */
+export function deleteEntity(c: Construction, id: EntityId): Construction {
+  const target = c.entities[id]
+  if (!target) return c
+
+  const doomed = new Set<EntityId>([id])
+  if (target.kind === 'point') {
+    for (const e of Object.values(c.entities)) {
+      if (e.kind === 'segment' || e.kind === 'line') {
+        if (e.a === id || e.b === id) doomed.add(e.id)
+      } else if (e.kind === 'circle') {
+        if (e.center === id || e.thru === id) doomed.add(e.id)
+      }
+    }
+  }
+
+  const entities = { ...c.entities }
+  for (const doomedId of doomed) delete entities[doomedId]
+  return { ...c, entities, order: c.order.filter((oid) => !doomed.has(oid)) }
 }
