@@ -67,6 +67,7 @@ export function addIntersectionPoint(
     a,
     b,
     branch,
+    exists: true,
     color: null,
     hidden: false,
   }))
@@ -76,10 +77,19 @@ function isPoint(e: Entity): e is PointEntity {
   return e.kind === 'point' || e.kind === 'intersection'
 }
 
-/** Resolve a point id to its current entity, or null if absent / not a point. */
+/**
+ * Resolve a point id to its current entity, or null if absent, not a
+ * point, or an intersection point whose sources currently don't meet
+ * (`exists: false`) — callers that look a point up to use its coordinates
+ * (rendering, geometry) should see nothing there, same as if it had never
+ * been created; the raw entity itself is still reachable via
+ * `c.entities[id]` for things like the object panel that list it either way.
+ */
 export function getPoint(c: Construction, id: EntityId): PointEntity | null {
   const e = c.entities[id]
-  return e && isPoint(e) ? e : null
+  if (!e || !isPoint(e)) return null
+  if (e.kind === 'intersection' && !e.exists) return null
+  return e
 }
 
 /** All point entities (free or intersection) in insertion order. */
@@ -117,8 +127,10 @@ export function movePoint(c: Construction, id: EntityId, x: number, y: number): 
  * curves or coordinates beyond a point's own x/y, so the view layer
  * (view/intersections.ts) injects the real hyperbolic math, same split as
  * naming.ts does for display names. When it returns null — the two
- * sources no longer meet — the point freezes at its last position rather
- * than disappearing.
+ * sources no longer meet — the point is marked `exists: false` (its x/y
+ * stay at their last position, unused while it doesn't exist) instead of
+ * being deleted, so it comes back at the right spot if the sources are
+ * dragged back into meeting again.
  */
 export function recomputeIntersections(
   c: Construction,
@@ -134,18 +146,26 @@ export function recomputeIntersections(
     const e = entities[id]
     if (e.kind !== 'intersection') continue
     const p = compute({ ...c, entities }, e.a, e.b, e.branch)
-    if (p && (p.x !== e.x || p.y !== e.y)) {
-      const moved: IntersectionPoint = { ...e, x: p.x, y: p.y }
-      entities = { ...entities, [id]: moved }
+    if (p) {
+      if (!e.exists || p.x !== e.x || p.y !== e.y) {
+        const moved: IntersectionPoint = { ...e, x: p.x, y: p.y, exists: true }
+        entities = { ...entities, [id]: moved }
+      }
+    } else if (e.exists) {
+      const vanished: IntersectionPoint = { ...e, exists: false }
+      entities = { ...entities, [id]: vanished }
     }
   }
   return entities === c.entities ? c : { ...c, entities }
 }
 
 /**
- * Nearest existing point within `threshold` (svg units), or null.
- * This powers snapping: tools reuse this point instead of stacking a new one
- * on top, which is what lets entities share endpoints and survive drags.
+ * Nearest existing, currently-visible point within `threshold` (svg
+ * units), or null. This powers snapping: tools reuse this point instead
+ * of stacking a new one on top, which is what lets entities share
+ * endpoints and survive drags. An intersection point with no current
+ * solution (`exists: false`) is invisible and skipped — nothing should
+ * snap to, or start a drag on, a point that isn't there.
  */
 export function findPointNear(
   c: Construction,
@@ -156,6 +176,7 @@ export function findPointNear(
   let best: EntityId | null = null
   let bestDist = threshold
   for (const p of allPoints(c)) {
+    if (p.kind === 'intersection' && !p.exists) continue
     const d = Math.hypot(p.x - x, p.y - y)
     if (d <= bestDist) {
       best = p.id

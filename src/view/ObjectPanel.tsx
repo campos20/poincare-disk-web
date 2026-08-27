@@ -95,15 +95,21 @@ export function ObjectPanel({
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
             const selected = entity.id === selectedId;
+            const vanished = entity.kind === "intersection" && !entity.exists;
             const itemClass = [
               "object-item",
               selected && "selected",
               entity.hidden && "hidden-entity",
+              vanished && "undefined-entity",
             ]
               .filter(Boolean)
               .join(" ");
             return (
-              <li key={entity.id} className={itemClass}>
+              <li
+                key={entity.id}
+                className={itemClass}
+                title={vanished ? t("panel.undefined") : undefined}
+              >
                 <button
                   type="button"
                   className="object-row"

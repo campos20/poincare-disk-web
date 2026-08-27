@@ -35,6 +35,13 @@ export interface FreePoint extends EntityStyle {
  * engine only tracks which two entities it comes from and which solution
  * (`branch`) it is when there are two. Not draggable: `movePoint` only
  * moves entities of kind `'point'`.
+ *
+ * `exists` tracks whether the two source entities currently meet at this
+ * solution at all — e.g. two circles dragged apart stop crossing. When
+ * they don't, `recomputeIntersections` sets it false and leaves x/y at
+ * their last known position rather than guessing a new one; `exists`,
+ * not the coordinates, is what callers (rendering, snapping) must check
+ * before treating the point as real.
  */
 export interface IntersectionPoint extends EntityStyle {
   readonly id: EntityId
@@ -44,6 +51,7 @@ export interface IntersectionPoint extends EntityStyle {
   readonly a: EntityId
   readonly b: EntityId
   readonly branch: 0 | 1
+  readonly exists: boolean
 }
 
 export type PointEntity = FreePoint | IntersectionPoint

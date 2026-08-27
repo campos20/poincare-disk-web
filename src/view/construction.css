@@ -221,7 +221,8 @@
   background: #1a212b;
 }
 
-.object-item.hidden-entity {
+.object-item.hidden-entity,
+.object-item.undefined-entity {
   opacity: 0.55;
 }
 

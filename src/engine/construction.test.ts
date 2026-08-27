@@ -72,6 +72,22 @@ describe('snapping', () => {
     expect(allPoints(acquired.construction)).toHaveLength(2)
     expect(getPoint(acquired.construction, acquired.id)).toMatchObject({ x: 100, y: 100 })
   })
+
+  it('skips a nonexistent intersection point even sitting exactly on its frozen position', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+    const gone = recomputeIntersections(cross.construction, () => null)
+
+    // A small threshold that would only ever match the intersection point
+    // itself (p1 and p2 are both 5 units away) confirms it's really being
+    // skipped, not just out-distanced by another point.
+    expect(findPointNear(gone, 5, 0, 1)).toBeNull()
+    // acquirePoint falls back to creating a brand new free point instead.
+    const acquired = acquirePoint(gone, 5, 0, 1)
+    expect(acquired.created).toBe(true)
+  })
 })
 
 describe('dragging', () => {
@@ -263,14 +279,39 @@ describe('recomputeIntersections', () => {
     expect(getPoint(after, cross.id)).toMatchObject({ x: 42, y: -7 })
   })
 
-  it('freezes in place when compute reports no solution', () => {
+  it('marks the point as not existing (coordinates frozen) when compute reports no solution', () => {
     const p1 = addFreePoint(emptyConstruction(), 0, 0)
     const p2 = addFreePoint(p1.construction, 10, 0)
     const line = addLine(p2.construction, p1.id, p2.id)
     const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
 
     const after = recomputeIntersections(cross.construction, () => null)
-    expect(after).toBe(cross.construction)
+    expect(after.entities[cross.id]).toMatchObject({ exists: false, x: 5, y: 0 })
+    // getPoint treats a nonexistent intersection as not found, same as a
+    // deleted or never-created point.
+    expect(getPoint(after, cross.id)).toBeNull()
+  })
+
+  it('is a no-op once already marked nonexistent', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+
+    const gone = recomputeIntersections(cross.construction, () => null)
+    const again = recomputeIntersections(gone, () => null)
+    expect(again).toBe(gone)
+  })
+
+  it('comes back into existence, at the newly solved position, once compute finds one again', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+
+    const gone = recomputeIntersections(cross.construction, () => null)
+    const back = recomputeIntersections(gone, () => ({ x: 7, y: 1 }))
+    expect(getPoint(back, cross.id)).toMatchObject({ x: 7, y: 1, exists: true })
   })
 
   it('processes in construction order so a later intersection sees an earlier one\'s refreshed position', () => {

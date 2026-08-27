@@ -69,6 +69,10 @@ export function renderEntity(
     case 'point':
     case 'intersection': {
       if (entity.hidden) return null
+      // A vanished intersection (its two sources currently don't meet)
+      // has no real position — its x/y are just frozen at the last one —
+      // so it must not be drawn.
+      if (entity.kind === 'intersection' && !entity.exists) return null
       const p = toScreen(entity)
       const name = opts.names.get(entity.id)
       // A custom color is skipped while the point is being actively
