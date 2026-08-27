@@ -1,5 +1,7 @@
 # Poincaré Disk — Constructions
 
+You can try the app here: <https://campos20.github.io/poincare-disk-web/>
+
 An interactive geometry tool (GeoGebra/Desmos-inspired). Constructions are
 currently rendered in Euclidean geometry; the goal is to swap the rendering to
 the Poincaré disk (hyperbolic geometry) without touching the engine, tools, or
