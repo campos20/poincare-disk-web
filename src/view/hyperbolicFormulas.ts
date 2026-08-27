@@ -16,7 +16,7 @@
  * Add new formulas as additional named exports below.
  */
 
-import type { CircleShape, XY } from './geometry'
+import type { CircleShape, XY } from './shapes'
 
 /** Euclidean distance from a point to the origin (the "d" in dA, dB, …). */
 export function distanceFromOrigin(p: XY): number {

@@ -4,7 +4,7 @@ import { findPointNear, SNAP_THRESHOLD } from '../engine'
 import { useI18n } from '../i18n/context'
 import type { AppAction, AppState } from './appState'
 import { DISK_RADIUS, toModel } from './disk'
-import type { Rect, XY } from './geometry'
+import type { Rect, XY } from './shapes'
 import { renderEntity } from './renderEntity'
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */

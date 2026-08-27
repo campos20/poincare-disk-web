@@ -11,17 +11,7 @@
  *     Euclidean circle, just with a shifted center — so {cx, cy, r} holds.
  */
 
-export interface XY {
-  readonly x: number
-  readonly y: number
-}
-
-export interface Rect {
-  readonly minX: number
-  readonly minY: number
-  readonly maxX: number
-  readonly maxY: number
-}
+import type { CircleShape, Rect, XY } from './shapes'
 
 export function distance(a: XY, b: XY): number {
   return Math.hypot(b.x - a.x, b.y - a.y)
@@ -74,12 +64,6 @@ export function lineShape(a: XY, b: XY, viewport: Rect): string | null {
   const clipped = clipLineToRect(a, b, viewport)
   if (!clipped) return null
   return segmentShape(clipped[0], clipped[1])
-}
-
-export interface CircleShape {
-  readonly cx: number
-  readonly cy: number
-  readonly r: number
 }
 
 /** Circle centered at `center` passing through `thru`. */

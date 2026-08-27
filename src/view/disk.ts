@@ -1,4 +1,4 @@
-import type { XY } from "./geometry";
+import type { XY } from "./shapes";
 
 /**
  * The Poincaré disk model: internally always the unit disk — centered at

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addFreePoint, allPoints, emptyConstruction, getPoint } from './construction'
-import { applyClick, initialToolState, selectTool } from './tools'
+import { applyClick, initialToolState, selectTool, SNAP_THRESHOLD } from './tools'
 import type { ToolState } from './tools'
 
 const tool = (id: ToolState['tool']): ToolState => ({ tool: id, buffer: [] })
@@ -26,6 +26,25 @@ describe('point tool', () => {
     const result = applyClick(construction, tool('point'), 45, 17, 12)
     expect(result.created).toBeNull()
     expect(allPoints(result.construction)).toHaveLength(1)
+  })
+})
+
+describe('default snap threshold', () => {
+  // The tests above pass an explicit threshold so they can use readable,
+  // arbitrary-scale coordinates independent of SNAP_THRESHOLD's actual
+  // value. This one instead exercises applyClick's real default, at
+  // fractions of SNAP_THRESHOLD itself so it stays correct if that value
+  // is ever retuned.
+  it('snaps within SNAP_THRESHOLD and creates a new point just beyond it', () => {
+    const { construction } = addFreePoint(emptyConstruction(), 0.5, 0.5)
+
+    const inside = applyClick(construction, tool('point'), 0.5 + SNAP_THRESHOLD * 0.9, 0.5)
+    expect(inside.created).toBeNull()
+    expect(allPoints(inside.construction)).toHaveLength(1)
+
+    const outside = applyClick(construction, tool('point'), 0.5 + SNAP_THRESHOLD * 1.1, 0.5)
+    expect(outside.created).not.toBeNull()
+    expect(allPoints(outside.construction)).toHaveLength(2)
   })
 })
 
