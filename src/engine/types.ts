@@ -9,25 +9,55 @@
 
 export type EntityId = string
 
+/**
+ * Style/visibility shared by every entity kind. `color: null` means "use the
+ * default palette color for this kind"; a hex string is an explicit
+ * per-object override, same as GeoGebra's object color.
+ */
+export interface EntityStyle {
+  readonly color: string | null
+  readonly hidden: boolean
+}
+
 /** A free point: user-placed, draggable, owns its coordinates. */
-export interface FreePoint {
+export interface FreePoint extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'point'
   readonly x: number
   readonly y: number
 }
 
-// FUTURE: derived points (midpoint, intersection, …) slot in here as a new
-// kind whose coordinates come from a compute function of its referenced ids
-// instead of the mouse:
-//   interface DerivedPoint { kind: 'derived-point'; deps: EntityId[]; compute: ... }
-// They join `PointEntity` below, and `movePoint` gains a dependency-DAG
-// topological recompute pass (see construction.ts).
+/**
+ * A point at one of the (up to two) intersections of two curve entities
+ * (segment/line/circle). Coordinates are derived, not user-set:
+ * `recomputeIntersections` (construction.ts) refreshes them whenever a
+ * dependency moves, given the actual geometry from the view layer — the
+ * engine only tracks which two entities it comes from and which solution
+ * (`branch`) it is when there are two. Not draggable: `movePoint` only
+ * moves entities of kind `'point'`.
+ *
+ * `exists` tracks whether the two source entities currently meet at this
+ * solution at all — e.g. two circles dragged apart stop crossing. When
+ * they don't, `recomputeIntersections` sets it false and leaves x/y at
+ * their last known position rather than guessing a new one; `exists`,
+ * not the coordinates, is what callers (rendering, snapping) must check
+ * before treating the point as real.
+ */
+export interface IntersectionPoint extends EntityStyle {
+  readonly id: EntityId
+  readonly kind: 'intersection'
+  readonly x: number
+  readonly y: number
+  readonly a: EntityId
+  readonly b: EntityId
+  readonly branch: 0 | 1
+  readonly exists: boolean
+}
 
-export type PointEntity = FreePoint
+export type PointEntity = FreePoint | IntersectionPoint
 
 /** Straight segment between two points. */
-export interface Segment {
+export interface Segment extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'segment'
   readonly a: EntityId
@@ -35,7 +65,7 @@ export interface Segment {
 }
 
 /** Infinite line through two points. */
-export interface Line {
+export interface Line extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'line'
   readonly a: EntityId
@@ -43,7 +73,7 @@ export interface Line {
 }
 
 /** Circle centered at `center`, passing through `thru`. */
-export interface Circle {
+export interface Circle extends EntityStyle {
   readonly id: EntityId
   readonly kind: 'circle'
   readonly center: EntityId

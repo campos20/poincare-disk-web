@@ -6,6 +6,7 @@ import type { AppAction, AppState } from './appState'
 import { DISK_RADIUS, toModel } from './disk'
 import type { Rect, XY } from './shapes'
 import { renderEntity } from './renderEntity'
+import { pointNames } from './naming'
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */
 const DISK_MARGIN = DISK_RADIUS + 10
@@ -37,7 +38,7 @@ function toSvgCoords(svg: SVGSVGElement, clientX: number, clientY: number): XY |
 export function ConstructionCanvas({ state, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const { t } = useI18n()
-  const { construction, toolState, dragId } = state
+  const { construction, toolState, dragId, selectedId } = state
   const [viewport, setViewport] = useState<Rect>(() => fitViewport(4, 3))
 
   useEffect(() => {
@@ -59,12 +60,25 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   }
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (toolState.tool === 'intersect') {
+      // The intersect tool picks entities by what was actually clicked
+      // (see renderEntity's invisible `.ent-hit` overlays), not by nearest
+      // coordinate — an entirely different click model from the other
+      // tools, so it bypasses the coordinate-based canvasClick action.
+      const target = e.target as Element
+      const id = target.closest('[data-entity-id]')?.getAttribute('data-entity-id')
+      if (id) dispatch({ type: 'entityClick', id })
+      return
+    }
+
     const pt = eventCoords(e)
     if (!pt) return
     const model = toModel(pt)
     if (toolState.tool === 'select') {
       const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD)
-      if (id !== null) {
+      // Intersection points are derived, not draggable — don't start a
+      // drag that movePoint would just ignore.
+      if (id !== null && construction.entities[id]?.kind === 'point') {
         e.currentTarget.setPointerCapture(e.pointerId)
         dispatch({ type: 'dragStart', id })
       }
@@ -87,17 +101,21 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   }
 
   const highlighted = new Set(toolState.buffer)
-  const opts = { highlighted, dragId }
+  const names = pointNames(construction)
+  const opts = { highlighted, dragId, names, selectedId }
 
   // Strokes first, points on top, so points stay grabbable.
   const entities = state.construction.order.map((id) => construction.entities[id])
-  const strokes = entities.filter((ent) => ent.kind !== 'point')
-  const points = entities.filter((ent) => ent.kind === 'point')
+  const strokes = entities.filter((ent) => ent.kind !== 'point' && ent.kind !== 'intersection')
+  const points = entities.filter((ent) => ent.kind === 'point' || ent.kind === 'intersection')
+
+  const mode =
+    toolState.tool === 'select' ? 'mode-select' : toolState.tool === 'intersect' ? 'mode-intersect' : 'mode-build'
 
   return (
     <svg
       ref={svgRef}
-      className={`construction-canvas ${toolState.tool === 'select' ? 'mode-select' : 'mode-build'}`}
+      className={`construction-canvas ${mode}`}
       viewBox={`${viewport.minX} ${viewport.minY} ${viewport.maxX - viewport.minX} ${viewport.maxY - viewport.minY}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

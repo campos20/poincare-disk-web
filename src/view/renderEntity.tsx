@@ -4,7 +4,7 @@
  * SVG elements and styling.
  */
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { getPoint } from '../engine'
 import type { Construction, Entity, EntityId } from '../engine'
 import { DISK_RADIUS, toScreen } from './disk'
@@ -17,16 +17,38 @@ import {
 } from './hyperbolicFormulas'
 
 export interface RenderOptions {
-  /** Point ids buffered by the active tool (highlighted). */
+  /** Entity ids buffered by the active tool: point ids for the 2-point
+   * tools, curve entity ids for the intersect tool (highlighted either way). */
   readonly highlighted: ReadonlySet<EntityId>
   /** Point currently being dragged. */
   readonly dragId: EntityId | null
+  /** Display names for points, keyed by id (see naming.ts). */
+  readonly names: ReadonlyMap<EntityId, string>
+  /** Object selected in the left panel, or null. */
+  readonly selectedId: EntityId | null
 }
 
-function pointClass(id: EntityId, opts: RenderOptions): string {
-  if (id === opts.dragId) return 'ent-point dragging'
-  if (opts.highlighted.has(id)) return 'ent-point buffered'
-  return 'ent-point'
+function strokeClass(entity: Entity, opts: RenderOptions, extra = ''): string {
+  const buffered = opts.highlighted.has(entity.id) ? ' buffered' : ''
+  const selected = entity.id === opts.selectedId ? ' selected' : ''
+  return `ent-stroke${extra}${buffered}${selected}`
+}
+
+// A custom color is skipped while the entity is buffered by the active
+// tool (e.g. the first pick for the intersect tool) so the buffered
+// feedback color — applied via the .ent-stroke.buffered CSS class — isn't
+// overridden by this inline style, which otherwise always wins.
+function strokeStyle(entity: Entity, opts: RenderOptions): CSSProperties | undefined {
+  const buffered = opts.highlighted.has(entity.id)
+  return !buffered && entity.color ? { stroke: entity.color } : undefined
+}
+
+function pointClass(entity: Entity, opts: RenderOptions): string {
+  const derived = entity.kind === 'intersection' ? ' derived' : ''
+  const selected = entity.id === opts.selectedId ? ' selected' : ''
+  if (entity.id === opts.dragId) return `ent-point dragging${derived}${selected}`
+  if (opts.highlighted.has(entity.id)) return `ent-point buffered${derived}${selected}`
+  return `ent-point${derived}${selected}`
 }
 
 /** SVG path `d` for a hyperbolic line/segment shape, scaled to screen space. */
@@ -49,20 +71,40 @@ export function renderEntity(
   opts: RenderOptions,
 ): ReactNode {
   switch (entity.kind) {
-    case 'point': {
+    case 'point':
+    case 'intersection': {
+      if (entity.hidden) return null
+      // A vanished intersection (its two sources currently don't meet)
+      // has no real position — its x/y are just frozen at the last one —
+      // so it must not be drawn.
+      if (entity.kind === 'intersection' && !entity.exists) return null
       const p = toScreen(entity)
+      const name = opts.names.get(entity.id)
+      // A custom color is skipped while the point is being actively
+      // manipulated so the drag/buffered feedback colors stay visible.
+      const active = entity.id === opts.dragId || opts.highlighted.has(entity.id)
+      const style: CSSProperties | undefined =
+        !active && entity.color ? { fill: entity.color } : undefined
       return (
-        <circle
-          key={entity.id}
-          data-point-id={entity.id}
-          className={pointClass(entity.id, opts)}
-          cx={p.x}
-          cy={p.y}
-          r={5}
-        />
+        <g key={entity.id}>
+          <circle
+            data-point-id={entity.id}
+            className={pointClass(entity, opts)}
+            style={style}
+            cx={p.x}
+            cy={p.y}
+            r={5}
+          />
+          {name && (
+            <text className="point-label" x={p.x + 8} y={p.y - 8}>
+              {name}
+            </text>
+          )}
+        </g>
       )
     }
     case 'segment': {
+      if (entity.hidden) return null
       // The formulas assume a true radius-1 disk, so these need the raw
       // model points, not screen-scaled ones — the resulting shape is
       // scaled to screen afterward instead.
@@ -71,17 +113,31 @@ export function renderEntity(
       if (!a || !b) return null
       const shape = hyperbolicSegmentThroughPoints(a, b)
       if (!shape) return null
-      return <path key={entity.id} className="ent-stroke" d={hyperbolicPath(shape)} />
+      const d = hyperbolicPath(shape)
+      return (
+        <g key={entity.id} data-entity-id={entity.id}>
+          <path className="ent-hit" d={d} />
+          <path className={strokeClass(entity, opts)} style={strokeStyle(entity, opts)} d={d} />
+        </g>
+      )
     }
     case 'line': {
+      if (entity.hidden) return null
       const a = getPoint(construction, entity.a)
       const b = getPoint(construction, entity.b)
       if (!a || !b) return null
       const shape = hyperbolicLineThroughPoints(a, b)
       if (!shape) return null
-      return <path key={entity.id} className="ent-stroke ent-line" d={hyperbolicPath(shape)} />
+      const d = hyperbolicPath(shape)
+      return (
+        <g key={entity.id} data-entity-id={entity.id}>
+          <path className="ent-hit" d={d} />
+          <path className={strokeClass(entity, opts, ' ent-line')} style={strokeStyle(entity, opts)} d={d} />
+        </g>
+      )
     }
     case 'circle': {
+      if (entity.hidden) return null
       // Like the line case, the formula assumes a true radius-1 disk, so it
       // needs the raw model points; the resulting shape is scaled to screen
       // afterward.
@@ -90,8 +146,18 @@ export function renderEntity(
       if (!center || !thru) return null
       const shape = hyperbolicCircleThroughPoints(center, thru)
       const c = toScreen({ x: shape.cx, y: shape.cy })
+      const r = shape.r * DISK_RADIUS
       return (
-        <circle key={entity.id} className="ent-stroke" cx={c.x} cy={c.y} r={shape.r * DISK_RADIUS} />
+        <g key={entity.id} data-entity-id={entity.id}>
+          <circle className="ent-hit" cx={c.x} cy={c.y} r={r} />
+          <circle
+            className={strokeClass(entity, opts)}
+            style={strokeStyle(entity, opts)}
+            cx={c.x}
+            cy={c.y}
+            r={r}
+          />
+        </g>
       )
     }
   }

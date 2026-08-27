@@ -29,13 +29,24 @@ export function distanceFromOrigin(p: XY): number {
  * B, expressed as a Euclidean center/radius so it can be rendered directly
  * as an SVG circle/arc.
  *
- * Returns null when A, B and the origin are collinear: the geodesic through
- * them degenerates to a diameter (a straight line), which has no finite
- * orthogonal-circle representation.
+ * Returns null when A, B and the origin are (numerically) collinear: the
+ * geodesic through them degenerates to a diameter (a straight line), which
+ * has no finite orthogonal-circle representation. `denom` is twice the
+ * signed area of triangle (O, A, B), exactly zero for true collinearity —
+ * but coordinates arriving from a real click (screen → SVG → model, via a
+ * matrix inverse) are essentially never bit-exact even when the user's
+ * intent was a diameter, leaving a residual on the order of 1e-13 for
+ * points within the unit disk. Without a tolerance, that residual is
+ * treated as "not collinear", producing an orthogonal circle with a
+ * near-infinite radius: it still renders as what looks like a straight
+ * line, but squaring and differencing that huge radius (e.g. in
+ * intersection math) amplifies the residual into garbage. The tolerance
+ * below is well above that noise floor and well below the `denom` of any
+ * deliberately-distinct pair of points inside the disk.
  */
 export function orthogonalCircleThroughPoints(a: XY, b: XY): CircleShape | null {
   const denom = 2 * (a.x * b.y - b.x * a.y)
-  if (denom === 0) return null
+  if (Math.abs(denom) < 1e-9) return null
 
   const dA = distanceFromOrigin(a)
   const dB = distanceFromOrigin(b)

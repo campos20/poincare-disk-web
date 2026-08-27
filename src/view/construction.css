@@ -54,6 +54,64 @@
   border-color: #384354;
 }
 
+.tool-group {
+  position: relative;
+}
+
+.tool-group-caret {
+  margin-left: 0.05rem;
+  color: #6b7684;
+}
+
+.tool-menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 9rem;
+  padding: 0.3rem;
+  background: #161b22;
+  border: 1px solid #2a323d;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Anchor the last group's menu to the right so it doesn't overflow past
+   the toolbar's edge on narrow screens. */
+.tool-group:last-child .tool-menu {
+  left: auto;
+  right: 0;
+}
+
+.tool-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #b8c2cd;
+  white-space: nowrap;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tool-menu-item:hover {
+  background: #1a212b;
+}
+
+.tool-menu-item.active {
+  color: #eaf1f8;
+  background: #1f2937;
+  border-color: #384354;
+}
+
 .lang-switch {
   display: flex;
   gap: 0.15rem;
@@ -81,6 +139,205 @@
   color: #eaf1f8;
   background: #1f2937;
   border-color: #384354;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.object-panel {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 240px;
+  overflow: hidden;
+  background: #11151b;
+  border-right: 1px solid #232a33;
+  transition: width 0.15s ease;
+}
+
+.object-panel.collapsed {
+  width: 2.5rem;
+}
+
+.object-panel-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #232a33;
+}
+
+.object-panel.collapsed .object-panel-header {
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.object-panel-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8b97a5;
+}
+
+.panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  color: #8b97a5;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.panel-toggle:hover {
+  color: #eaf1f8;
+  background: #1a212b;
+}
+
+.object-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.4rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.object-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  border-radius: 6px;
+}
+
+.object-item.selected {
+  background: #1a212b;
+}
+
+.object-item.hidden-entity,
+.object-item.undefined-entity {
+  opacity: 0.55;
+}
+
+.object-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: #dbe2ea;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.object-row:hover {
+  background: #1a212b;
+}
+
+.object-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.object-icon-point {
+  color: #e8b45a;
+}
+
+.object-icon-intersection {
+  color: #f4d06f;
+}
+
+.object-icon-segment,
+.object-icon-line,
+.object-icon-circle {
+  color: #7fa7d4;
+}
+
+.object-actions {
+  display: flex;
+  flex: none;
+  gap: 0.1rem;
+  padding-right: 0.25rem;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  color: #5c6773;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: #eaf1f8;
+  background: #232a33;
+}
+
+.icon-button[aria-pressed="true"] {
+  color: #8b97a5;
+}
+
+.object-colors {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem 0.5rem 1.75rem;
+}
+
+.color-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+}
+
+.color-swatch.active {
+  border-color: #eaf1f8;
+}
+
+.color-swatch-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b97a5;
+  background: #232a33;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.object-empty {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  color: #5c6773;
+}
+
+.point-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #dbe2ea;
+  pointer-events: none;
+  user-select: none;
 }
 
 .construction-canvas {
@@ -111,6 +368,26 @@
   cursor: default;
 }
 
+.construction-canvas.mode-intersect {
+  cursor: default;
+}
+
+/* Invisible overlay with a much wider hit area than the visible stroke,
+   so entities are easy to click for the intersect tool. Never intercepts
+   pointer events outside that tool — see ConstructionCanvas.onPointerDown,
+   which only looks at the clicked element while tool === 'intersect'. */
+.ent-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+
+.construction-canvas.mode-intersect .ent-hit {
+  cursor: pointer;
+}
+
 .ent-stroke {
   fill: none;
   stroke: #7fa7d4;
@@ -123,11 +400,19 @@
   stroke-dasharray: none;
 }
 
+.ent-stroke.buffered {
+  stroke: #6ee7b7;
+}
+
 .ent-point {
   fill: #e8b45a;
   stroke: #0e1116;
   stroke-width: 1.5;
   cursor: grab;
+}
+
+.ent-point.derived {
+  cursor: default;
 }
 
 .ent-point.buffered {
@@ -137,6 +422,15 @@
 .ent-point.dragging {
   fill: #f4d06f;
   cursor: grabbing;
+}
+
+.ent-stroke.selected {
+  stroke-width: 3;
+}
+
+.ent-point.selected {
+  stroke: #eaf1f8;
+  stroke-width: 2.5;
 }
 
 /* Fixed height + single line: hint text changes with every tool/step and
@@ -177,5 +471,9 @@
   .hint-bar {
     font-size: 0.8rem;
     padding: 0 0.6rem;
+  }
+
+  .object-panel {
+    width: 170px;
   }
 }
