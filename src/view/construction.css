@@ -198,6 +198,10 @@
   color: #e8b45a;
 }
 
+.object-icon-intersection {
+  color: #f4d06f;
+}
+
 .object-icon-segment,
 .object-icon-line,
 .object-icon-circle {
@@ -305,6 +309,26 @@
   cursor: default;
 }
 
+.construction-canvas.mode-intersect {
+  cursor: default;
+}
+
+/* Invisible overlay with a much wider hit area than the visible stroke,
+   so entities are easy to click for the intersect tool. Never intercepts
+   pointer events outside that tool — see ConstructionCanvas.onPointerDown,
+   which only looks at the clicked element while tool === 'intersect'. */
+.ent-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+
+.construction-canvas.mode-intersect .ent-hit {
+  cursor: pointer;
+}
+
 .ent-stroke {
   fill: none;
   stroke: #7fa7d4;
@@ -317,11 +341,19 @@
   stroke-dasharray: none;
 }
 
+.ent-stroke.buffered {
+  stroke: #6ee7b7;
+}
+
 .ent-point {
   fill: #e8b45a;
   stroke: #0e1116;
   stroke-width: 1.5;
   cursor: grab;
+}
+
+.ent-point.derived {
+  cursor: default;
 }
 
 .ent-point.buffered {

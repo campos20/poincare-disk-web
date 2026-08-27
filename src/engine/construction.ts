@@ -4,7 +4,7 @@
  * other host) can consume them directly.
  */
 
-import type { Construction, Entity, EntityId, FreePoint, PointEntity } from './types'
+import type { Construction, Entity, EntityId, FreePoint, IntersectionPoint, PointEntity } from './types'
 
 export function emptyConstruction(): Construction {
   return { entities: {}, order: [], nextId: 1 }
@@ -43,18 +43,51 @@ export function addCircle(c: Construction, center: EntityId, thru: EntityId): Ad
   return withEntity(c, (id) => ({ id, kind: 'circle', center, thru, color: null, hidden: false }))
 }
 
+/**
+ * Add a point at the intersection of two curve entities (`a`, `b`: a
+ * segment/line/circle id each). `x`/`y` are the solved coordinates and
+ * `branch` picks which of up to two solutions this is — both supplied by
+ * the caller, since the engine has no geometry of its own (see
+ * view/intersections.ts, the counterpart to naming.ts's presentation
+ * split).
+ */
+export function addIntersectionPoint(
+  c: Construction,
+  x: number,
+  y: number,
+  a: EntityId,
+  b: EntityId,
+  branch: 0 | 1,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: 'intersection',
+    x,
+    y,
+    a,
+    b,
+    branch,
+    color: null,
+    hidden: false,
+  }))
+}
+
+function isPoint(e: Entity): e is PointEntity {
+  return e.kind === 'point' || e.kind === 'intersection'
+}
+
 /** Resolve a point id to its current entity, or null if absent / not a point. */
 export function getPoint(c: Construction, id: EntityId): PointEntity | null {
   const e = c.entities[id]
-  return e && e.kind === 'point' ? e : null
+  return e && isPoint(e) ? e : null
 }
 
-/** All point entities in insertion order. */
+/** All point entities (free or intersection) in insertion order. */
 export function allPoints(c: Construction): readonly PointEntity[] {
   const out: PointEntity[] = []
   for (const id of c.order) {
     const e = c.entities[id]
-    if (e.kind === 'point') out.push(e)
+    if (isPoint(e)) out.push(e)
   }
   return out
 }
@@ -62,15 +95,51 @@ export function allPoints(c: Construction): readonly PointEntity[] {
 /**
  * Move a free point. Dependents (segments/lines/circles) update "for free"
  * because they only hold references and are resolved at render time.
- *
- * FUTURE (dependency DAG): once derived points exist, this is where a
- * topological recompute of everything downstream of `id` happens.
+ * Intersection points don't move directly — they only ever get new
+ * coordinates through `recomputeIntersections` below — so this is a no-op
+ * for any id that isn't a `FreePoint`.
  */
 export function movePoint(c: Construction, id: EntityId, x: number, y: number): Construction {
   const e = c.entities[id]
   if (!e || e.kind !== 'point') return c
   const moved: FreePoint = { ...e, x, y }
   return { ...c, entities: { ...c.entities, [id]: moved } }
+}
+
+/**
+ * Refresh every intersection point's coordinates from its two source
+ * entities, in construction order. Order alone is a valid dependency order
+ * here — nothing can reference an entity created after it — so later
+ * intersections (e.g. a segment built between two earlier intersection
+ * points, then crossed with a circle) see already-updated sources.
+ *
+ * `compute` supplies the actual geometry: the engine has no notion of
+ * curves or coordinates beyond a point's own x/y, so the view layer
+ * (view/intersections.ts) injects the real hyperbolic math, same split as
+ * naming.ts does for display names. When it returns null — the two
+ * sources no longer meet — the point freezes at its last position rather
+ * than disappearing.
+ */
+export function recomputeIntersections(
+  c: Construction,
+  compute: (
+    construction: Construction,
+    a: EntityId,
+    b: EntityId,
+    branch: 0 | 1,
+  ) => { readonly x: number; readonly y: number } | null,
+): Construction {
+  let entities = c.entities
+  for (const id of c.order) {
+    const e = entities[id]
+    if (e.kind !== 'intersection') continue
+    const p = compute({ ...c, entities }, e.a, e.b, e.branch)
+    if (p && (p.x !== e.x || p.y !== e.y)) {
+      const moved: IntersectionPoint = { ...e, x: p.x, y: p.y }
+      entities = { ...entities, [id]: moved }
+    }
+  }
+  return entities === c.entities ? c : { ...c, entities }
 }
 
 /**
@@ -127,23 +196,41 @@ export function setHidden(c: Construction, id: EntityId, hidden: boolean): Const
   return { ...c, entities: { ...c.entities, [id]: { ...e, hidden } } }
 }
 
+/** The other entities an entity can't exist without. */
+function dependencies(e: Entity): readonly EntityId[] {
+  switch (e.kind) {
+    case 'point':
+      return []
+    case 'intersection':
+    case 'segment':
+    case 'line':
+      return [e.a, e.b]
+    case 'circle':
+      return [e.center, e.thru]
+  }
+}
+
 /**
- * Delete an entity. Deleting a point cascades to every segment/line/circle
- * that references it — those can't exist without their defining points —
- * since nothing else in the model references a non-point entity, one pass
- * is enough.
+ * Delete an entity, cascading to everything built on it — directly or
+ * transitively. A point's dependents are the segments/lines/circles that
+ * reference it; an intersection point additionally depends on its two
+ * source curves; and any of those can, in turn, be a dependency of
+ * something built later (e.g. a segment between two intersection points).
+ * A single sweep over `dependencies()` only catches direct references, so
+ * this repeats until a pass finds nothing new.
  */
 export function deleteEntity(c: Construction, id: EntityId): Construction {
-  const target = c.entities[id]
-  if (!target) return c
+  if (!(id in c.entities)) return c
 
   const doomed = new Set<EntityId>([id])
-  if (target.kind === 'point') {
+  let grew = true
+  while (grew) {
+    grew = false
     for (const e of Object.values(c.entities)) {
-      if (e.kind === 'segment' || e.kind === 'line') {
-        if (e.a === id || e.b === id) doomed.add(e.id)
-      } else if (e.kind === 'circle') {
-        if (e.center === id || e.thru === id) doomed.add(e.id)
+      if (doomed.has(e.id)) continue
+      if (dependencies(e).some((dep) => doomed.has(dep))) {
+        doomed.add(e.id)
+        grew = true
       }
     }
   }

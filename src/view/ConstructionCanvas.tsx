@@ -60,12 +60,25 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   }
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (toolState.tool === 'intersect') {
+      // The intersect tool picks entities by what was actually clicked
+      // (see renderEntity's invisible `.ent-hit` overlays), not by nearest
+      // coordinate — an entirely different click model from the other
+      // tools, so it bypasses the coordinate-based canvasClick action.
+      const target = e.target as Element
+      const id = target.closest('[data-entity-id]')?.getAttribute('data-entity-id')
+      if (id) dispatch({ type: 'entityClick', id })
+      return
+    }
+
     const pt = eventCoords(e)
     if (!pt) return
     const model = toModel(pt)
     if (toolState.tool === 'select') {
       const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD)
-      if (id !== null) {
+      // Intersection points are derived, not draggable — don't start a
+      // drag that movePoint would just ignore.
+      if (id !== null && construction.entities[id]?.kind === 'point') {
         e.currentTarget.setPointerCapture(e.pointerId)
         dispatch({ type: 'dragStart', id })
       }
@@ -93,13 +106,16 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
 
   // Strokes first, points on top, so points stay grabbable.
   const entities = state.construction.order.map((id) => construction.entities[id])
-  const strokes = entities.filter((ent) => ent.kind !== 'point')
-  const points = entities.filter((ent) => ent.kind === 'point')
+  const strokes = entities.filter((ent) => ent.kind !== 'point' && ent.kind !== 'intersection')
+  const points = entities.filter((ent) => ent.kind === 'point' || ent.kind === 'intersection')
+
+  const mode =
+    toolState.tool === 'select' ? 'mode-select' : toolState.tool === 'intersect' ? 'mode-intersect' : 'mode-build'
 
   return (
     <svg
       ref={svgRef}
-      className={`construction-canvas ${toolState.tool === 'select' ? 'mode-select' : 'mode-build'}`}
+      className={`construction-canvas ${mode}`}
       viewBox={`${viewport.minX} ${viewport.minY} ${viewport.maxX - viewport.minX} ${viewport.maxY - viewport.minY}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

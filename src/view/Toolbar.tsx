@@ -1,4 +1,4 @@
-import { Circle, Dot, Minus, MousePointer2, Slash } from "lucide-react";
+import { Circle, Dot, Minus, MousePointer2, Slash, SquaresIntersect } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TOOL_ORDER } from "../engine";
 import type { ToolId } from "../engine";
@@ -10,6 +10,7 @@ const ICONS: Record<ToolId, LucideIcon> = {
   segment: Minus,
   line: Slash,
   circle: Circle,
+  intersect: SquaresIntersect,
 };
 
 interface Props {

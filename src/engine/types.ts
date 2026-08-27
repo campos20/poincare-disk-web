@@ -27,14 +27,26 @@ export interface FreePoint extends EntityStyle {
   readonly y: number
 }
 
-// FUTURE: derived points (midpoint, intersection, …) slot in here as a new
-// kind whose coordinates come from a compute function of its referenced ids
-// instead of the mouse:
-//   interface DerivedPoint { kind: 'derived-point'; deps: EntityId[]; compute: ... }
-// They join `PointEntity` below, and `movePoint` gains a dependency-DAG
-// topological recompute pass (see construction.ts).
+/**
+ * A point at one of the (up to two) intersections of two curve entities
+ * (segment/line/circle). Coordinates are derived, not user-set:
+ * `recomputeIntersections` (construction.ts) refreshes them whenever a
+ * dependency moves, given the actual geometry from the view layer — the
+ * engine only tracks which two entities it comes from and which solution
+ * (`branch`) it is when there are two. Not draggable: `movePoint` only
+ * moves entities of kind `'point'`.
+ */
+export interface IntersectionPoint extends EntityStyle {
+  readonly id: EntityId
+  readonly kind: 'intersection'
+  readonly x: number
+  readonly y: number
+  readonly a: EntityId
+  readonly b: EntityId
+  readonly branch: 0 | 1
+}
 
-export type PointEntity = FreePoint
+export type PointEntity = FreePoint | IntersectionPoint
 
 /** Straight segment between two points. */
 export interface Segment extends EntityStyle {

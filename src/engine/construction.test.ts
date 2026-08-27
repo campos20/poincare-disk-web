@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   acquirePoint,
   addFreePoint,
+  addIntersectionPoint,
+  addLine,
   addSegment,
   allPoints,
   deleteEntity,
@@ -9,6 +11,7 @@ import {
   findPointNear,
   getPoint,
   movePoint,
+  recomputeIntersections,
   setColor,
   setHidden,
 } from './construction'
@@ -189,5 +192,103 @@ describe('deleteEntity', () => {
   it('ignores unknown ids', () => {
     const c = emptyConstruction()
     expect(deleteEntity(c, 'nope')).toBe(c)
+  })
+
+  it('cascades through an intersection point: deleting one of its two source curves removes it too', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const p3 = addFreePoint(p2.construction, 0, 10)
+    const p4 = addFreePoint(p3.construction, 10, 10)
+    const lineA = addLine(p4.construction, p1.id, p3.id)
+    const lineB = addLine(lineA.construction, p2.id, p4.id)
+    const cross = addIntersectionPoint(lineB.construction, 5, 5, lineA.id, lineB.id, 0)
+
+    const after = deleteEntity(cross.construction, lineA.id)
+    expect(after.entities[cross.id]).toBeUndefined()
+    // The other source curve is untouched.
+    expect(after.entities[lineB.id]).toBeDefined()
+  })
+
+  it('cascades transitively: point -> line -> intersection -> segment built on the intersection', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const p3 = addFreePoint(p2.construction, 0, 10)
+    const p4 = addFreePoint(p3.construction, 10, 10)
+    const lineA = addLine(p4.construction, p1.id, p3.id)
+    const lineB = addLine(lineA.construction, p2.id, p4.id)
+    const cross = addIntersectionPoint(lineB.construction, 5, 5, lineA.id, lineB.id, 0)
+    const built = addSegment(cross.construction, cross.id, p1.id)
+
+    // Deleting the original point p1 should ripple all the way through:
+    // p1 -> lineA (references p1) -> cross (built on lineA) -> built (built on cross).
+    const after = deleteEntity(built.construction, p1.id)
+    expect(after.entities[lineA.id]).toBeUndefined()
+    expect(after.entities[cross.id]).toBeUndefined()
+    expect(after.entities[built.id]).toBeUndefined()
+    // The untouched line survives.
+    expect(after.entities[lineB.id]).toBeDefined()
+  })
+})
+
+describe('addIntersectionPoint', () => {
+  it('adds a point that resolves like any other point', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+    expect(getPoint(cross.construction, cross.id)).toMatchObject({ x: 5, y: 0, kind: 'intersection' })
+    expect(allPoints(cross.construction)).toHaveLength(3)
+  })
+
+  it('is not moved by movePoint', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+
+    const after = movePoint(cross.construction, cross.id, 99, 99)
+    expect(after).toBe(cross.construction)
+  })
+})
+
+describe('recomputeIntersections', () => {
+  it('refreshes coordinates using the supplied compute function', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+
+    const after = recomputeIntersections(cross.construction, () => ({ x: 42, y: -7 }))
+    expect(getPoint(after, cross.id)).toMatchObject({ x: 42, y: -7 })
+  })
+
+  it('freezes in place when compute reports no solution', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const cross = addIntersectionPoint(line.construction, 5, 0, line.id, line.id, 0)
+
+    const after = recomputeIntersections(cross.construction, () => null)
+    expect(after).toBe(cross.construction)
+  })
+
+  it('processes in construction order so a later intersection sees an earlier one\'s refreshed position', () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0)
+    const p2 = addFreePoint(p1.construction, 10, 0)
+    const line = addLine(p2.construction, p1.id, p2.id)
+    const first = addIntersectionPoint(line.construction, 1, 1, line.id, line.id, 0)
+    const second = addIntersectionPoint(first.construction, 2, 2, line.id, line.id, 1)
+
+    const after = recomputeIntersections(second.construction, (construction, _a, _b, branch) => {
+      // Second point's "position" is defined as double the first point's
+      // current (already-recomputed) coordinates, to prove ordering.
+      if (branch === 0) return { x: 10, y: 20 }
+      const firstPoint = getPoint(construction, first.id)!
+      return { x: firstPoint.x * 2, y: firstPoint.y * 2 }
+    })
+
+    expect(getPoint(after, first.id)).toMatchObject({ x: 10, y: 20 })
+    expect(getPoint(after, second.id)).toMatchObject({ x: 20, y: 40 })
   })
 })

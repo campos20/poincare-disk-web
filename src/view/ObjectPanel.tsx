@@ -1,4 +1,5 @@
 import {
+  Asterisk,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -17,12 +18,13 @@ import { definingPoints, pointNames } from "./naming";
 
 const ICONS: Record<Entity["kind"], LucideIcon> = {
   point: Dot,
+  intersection: Asterisk,
   segment: Minus,
   line: Slash,
   circle: Circle,
 };
 
-const KIND_LABEL: Record<Exclude<Entity["kind"], "point">, MessageKey> = {
+const KIND_LABEL: Record<Exclude<Entity["kind"], "point" | "intersection">, MessageKey> = {
   segment: "object.segment",
   line: "object.line",
   circle: "object.circle",
@@ -39,7 +41,9 @@ function objectLabel(
   const points = definingPoints(entity)
     .map((id) => names.get(id) ?? "?")
     .join("");
-  return entity.kind === "point" ? points : `${t(KIND_LABEL[entity.kind])} ${points}`;
+  return entity.kind === "point" || entity.kind === "intersection"
+    ? points
+    : `${t(KIND_LABEL[entity.kind])} ${points}`;
 }
 
 interface Props {

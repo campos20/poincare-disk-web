@@ -29,6 +29,7 @@ export function pointNames(construction: Construction): ReadonlyMap<EntityId, st
 export function definingPoints(entity: Entity): readonly EntityId[] {
   switch (entity.kind) {
     case 'point':
+    case 'intersection':
       return [entity.id]
     case 'segment':
     case 'line':

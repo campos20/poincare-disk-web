@@ -4,17 +4,20 @@
  */
 
 import {
+  addIntersectionPoint,
   applyClick,
   deleteEntity,
   emptyConstruction,
   initialToolState,
   movePoint,
+  recomputeIntersections,
   selectTool,
   setColor,
   setHidden,
 } from '../engine'
 import type { Construction, EntityId, ToolId, ToolState } from '../engine'
 import { isInsideDisk } from './disk'
+import { computeIntersectionPoint, intersectEntities, isIntersectable } from './intersections'
 
 export interface AppState {
   readonly construction: Construction
@@ -35,6 +38,7 @@ export type AppAction =
   | { type: 'setColor'; id: EntityId; color: string | null }
   | { type: 'toggleHidden'; id: EntityId }
   | { type: 'deleteObject'; id: EntityId }
+  | { type: 'entityClick'; id: EntityId }
 
 export function initialAppState(): AppState {
   return {
@@ -59,6 +63,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         dragId: null,
       }
     case 'canvasClick': {
+      // The intersect tool acquires entities by what was clicked, handled
+      // entirely through 'entityClick' — it never reaches this action.
+      if (state.toolState.tool === 'intersect') return state
       // Constructions only exist inside the Poincaré disk.
       if (!isInsideDisk(action)) return state
       const result = applyClick(state.construction, state.toolState, action.x, action.y)
@@ -66,15 +73,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
     case 'dragStart':
       return { ...state, dragId: action.id }
-    case 'dragMove':
+    case 'dragMove': {
       if (state.dragId === null) return state
       // Ignore moves outside the disk: the point freezes at its last
       // valid position until the pointer re-enters.
       if (!isInsideDisk(action)) return state
-      return {
-        ...state,
-        construction: movePoint(state.construction, state.dragId, action.x, action.y),
-      }
+      const moved = movePoint(state.construction, state.dragId, action.x, action.y)
+      // Any intersection point built on this one (directly or through a
+      // chain of curves/other intersections) needs its position refreshed.
+      return { ...state, construction: recomputeIntersections(moved, computeIntersectionPoint) }
+    }
     case 'dragEnd':
       return { ...state, dragId: null }
     case 'selectObject':
@@ -101,6 +109,39 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           buffer: state.toolState.buffer.filter((id) => !isGone(construction, id)),
         },
       }
+    }
+    case 'entityClick': {
+      if (state.toolState.tool !== 'intersect') return state
+      const clicked = state.construction.entities[action.id]
+      if (!clicked || !isIntersectable(clicked)) return state
+
+      const { buffer } = state.toolState
+      if (buffer.length === 0 || buffer[0] === action.id) {
+        // First pick, or re-clicking the same entity: (re)start the buffer
+        // rather than intersecting it with itself.
+        return { ...state, toolState: { ...state.toolState, buffer: [action.id] } }
+      }
+
+      const first = state.construction.entities[buffer[0]]
+      if (!first || !isIntersectable(first)) {
+        return { ...state, toolState: { ...state.toolState, buffer: [action.id] } }
+      }
+
+      // Second pick: add every intersection point between the two curves
+      // (up to two, e.g. where two circles cross twice) in one go.
+      const solutions = intersectEntities(state.construction, first, clicked)
+      let construction = state.construction
+      solutions.forEach((p, index) => {
+        construction = addIntersectionPoint(
+          construction,
+          p.x,
+          p.y,
+          buffer[0],
+          action.id,
+          index as 0 | 1,
+        ).construction
+      })
+      return { ...state, construction, toolState: { ...state.toolState, buffer: [] } }
     }
   }
 }

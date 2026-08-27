@@ -21,7 +21,7 @@ import type { Construction, EntityId } from './types'
  */
 export const SNAP_THRESHOLD = 0.04
 
-export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle'
+export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle' | 'intersect'
 
 // Display names are presentation and live in the view's i18n layer;
 // the engine only knows stable ids and click counts.
@@ -30,15 +30,29 @@ export interface ToolDef {
   readonly pointsNeeded: number
 }
 
+// 'intersect' clicks pick entities, not coordinates, so it needs geometry
+// (which curves cross where) the engine doesn't have — its 2-click buffering
+// is handled by the view's reducer instead of applyClick below (see
+// appState.ts's 'entityClick' action, and view/intersections.ts for the
+// math). It's still declared here so the toolbar/tool-switching machinery
+// treats it like any other tool.
 export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
   select: { id: 'select', pointsNeeded: 0 },
   point: { id: 'point', pointsNeeded: 1 },
   segment: { id: 'segment', pointsNeeded: 2 },
   line: { id: 'line', pointsNeeded: 2 },
   circle: { id: 'circle', pointsNeeded: 2 },
+  intersect: { id: 'intersect', pointsNeeded: 2 },
 }
 
-export const TOOL_ORDER: readonly ToolId[] = ['select', 'point', 'segment', 'line', 'circle']
+export const TOOL_ORDER: readonly ToolId[] = [
+  'select',
+  'point',
+  'segment',
+  'line',
+  'circle',
+  'intersect',
+]
 
 export interface ToolState {
   readonly tool: ToolId

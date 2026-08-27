@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { addFreePoint, addSegment, allPoints, emptyConstruction, getPoint } from "../engine";
+import { addCircle, addFreePoint, addSegment, allPoints, emptyConstruction, getPoint } from "../engine";
+import type { EntityId } from "../engine";
 import { appReducer, initialAppState } from "./appState";
 import type { AppState } from "./appState";
 import { isInsideDisk } from "./disk";
@@ -107,5 +108,72 @@ describe("object panel actions", () => {
     const after = appReducer(state, { type: "deleteObject", id: p1.id });
     expect(after.construction.entities[seg.id]).toBeUndefined();
     expect(after.selectedId).toBeNull();
+  });
+});
+
+describe("intersect tool", () => {
+  const withIntersectTool = (buffer: EntityId[] = []): AppState => ({
+    ...initialAppState(),
+    toolState: { tool: "intersect", buffer },
+  });
+
+  function twoCrossingCircles() {
+    const c1 = addFreePoint(emptyConstruction(), -0.15, 0);
+    const t1 = addFreePoint(c1.construction, 0.15, 0);
+    const c2 = addFreePoint(t1.construction, 0.15, 0);
+    const t2 = addFreePoint(c2.construction, -0.15, 0);
+    const circleA = addCircle(t2.construction, c1.id, t1.id);
+    const circleB = addCircle(circleA.construction, c2.id, t2.id);
+    return {
+      construction: circleB.construction,
+      circleA: circleA.id,
+      circleB: circleB.id,
+      c1: c1.id,
+    };
+  }
+
+  it("first click buffers the entity; second click adds the intersection point(s)", () => {
+    const { construction, circleA, circleB } = twoCrossingCircles();
+    let state: AppState = { ...withIntersectTool(), construction };
+
+    state = appReducer(state, { type: "entityClick", id: circleA });
+    expect(state.toolState.buffer).toEqual([circleA]);
+    expect(allPoints(state.construction)).toHaveLength(4); // just the 4 defining points so far
+
+    state = appReducer(state, { type: "entityClick", id: circleB });
+    expect(state.toolState.buffer).toHaveLength(0);
+    expect(allPoints(state.construction)).toHaveLength(6); // + 2 intersection points
+    expect(allPoints(state.construction).filter((p) => p.kind === "intersection")).toHaveLength(2);
+  });
+
+  it("ignores entityClick outside the intersect tool", () => {
+    const { construction, circleA } = twoCrossingCircles();
+    const state: AppState = { ...withTool("select"), construction };
+    const after = appReducer(state, { type: "entityClick", id: circleA });
+    expect(after).toBe(state);
+  });
+
+  it("re-clicking the same entity restarts the buffer instead of self-intersecting", () => {
+    const { construction, circleA } = twoCrossingCircles();
+    let state: AppState = { ...withIntersectTool(), construction };
+    state = appReducer(state, { type: "entityClick", id: circleA });
+    state = appReducer(state, { type: "entityClick", id: circleA });
+    expect(state.toolState.buffer).toEqual([circleA]);
+  });
+
+  it("dragging a source point recomputes the intersection point's position", () => {
+    const { construction, circleA, circleB, c1 } = twoCrossingCircles();
+    let state: AppState = { ...withIntersectTool(), construction };
+    state = appReducer(state, { type: "entityClick", id: circleA });
+    state = appReducer(state, { type: "entityClick", id: circleB });
+
+    const crossId = allPoints(state.construction).find((p) => p.kind === "intersection")!.id;
+    const before = getPoint(state.construction, crossId)!;
+
+    state = appReducer(state, { type: "dragStart", id: c1 });
+    state = appReducer(state, { type: "dragMove", x: -0.3, y: 0 });
+
+    const after = getPoint(state.construction, crossId)!;
+    expect(after.x === before.x && after.y === before.y).toBe(false);
   });
 });
