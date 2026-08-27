@@ -23,7 +23,7 @@ describe('point tool', () => {
 
   it('snaps onto an existing point instead of stacking a duplicate', () => {
     const { construction } = addFreePoint(emptyConstruction(), 42, 17)
-    const result = applyClick(construction, tool('point'), 45, 17)
+    const result = applyClick(construction, tool('point'), 45, 17, 12)
     expect(result.created).toBeNull()
     expect(allPoints(result.construction)).toHaveLength(1)
   })
@@ -48,7 +48,7 @@ describe('two-point tools', () => {
 
   it('reuses an existing point as an endpoint via snapping', () => {
     const existing = addFreePoint(emptyConstruction(), 0, 0)
-    const first = applyClick(existing.construction, tool('segment'), 5, 3)
+    const first = applyClick(existing.construction, tool('segment'), 5, 3, 12)
     expect(first.toolState.buffer).toEqual([existing.id])
     expect(allPoints(first.construction)).toHaveLength(1)
   })
@@ -58,8 +58,8 @@ describe('two-point tools', () => {
     state = applyClick(state.construction, state.toolState, 100, 0)
     const segA = state.construction.entities[state.created!]
 
-    state = applyClick(state.construction, state.toolState, 98, 2) // snaps to (100, 0)
-    state = applyClick(state.construction, state.toolState, 200, 50)
+    state = applyClick(state.construction, state.toolState, 98, 2, 12) // snaps to (100, 0)
+    state = applyClick(state.construction, state.toolState, 200, 50, 12)
     const segB = state.construction.entities[state.created!]
 
     if (segA.kind !== 'segment' || segB.kind !== 'segment') throw new Error('expected segments')
@@ -69,7 +69,7 @@ describe('two-point tools', () => {
 
   it('ignores a second click on the already-buffered point', () => {
     const first = applyClick(emptyConstruction(), tool('segment'), 0, 0)
-    const second = applyClick(first.construction, first.toolState, 3, 3) // snaps to buffered point
+    const second = applyClick(first.construction, first.toolState, 3, 3, 12) // snaps to buffered point
     expect(second.created).toBeNull()
     expect(second.toolState.buffer).toHaveLength(1)
     expect(allPoints(second.construction)).toHaveLength(1)

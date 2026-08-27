@@ -12,8 +12,13 @@ import {
 } from './construction'
 import type { Construction, EntityId } from './types'
 
-/** Snap radius in svg units: clicks within this reuse an existing point. */
-export const SNAP_THRESHOLD = 12
+/**
+ * Snap radius in model units: clicks within this reuse an existing point.
+ * The model's unit disk has radius 1; this mirrors the prior 12px threshold
+ * at the view's on-screen disk radius of 290px (12/290), so on-screen snap
+ * distance is unchanged even though the engine itself doesn't know pixels.
+ */
+export const SNAP_THRESHOLD = 12 / 290
 
 export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle'
 
