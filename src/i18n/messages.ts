@@ -18,6 +18,13 @@ const en = {
   "toolbar.aria": "Construction tools",
   "canvas.aria": "Construction canvas",
   "language.aria": "Language",
+  "panel.title": "Objects",
+  "panel.empty": "No objects yet.",
+  "panel.expand": "Expand object panel",
+  "panel.collapse": "Collapse object panel",
+  "object.segment": "Segment",
+  "object.line": "Line",
+  "object.circle": "Circle",
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;
@@ -41,6 +48,13 @@ const pt: Record<MessageKey, string> = {
   "toolbar.aria": "Ferramentas de construção",
   "canvas.aria": "Tela de construção",
   "language.aria": "Idioma",
+  "panel.title": "Objetos",
+  "panel.empty": "Nenhum objeto ainda.",
+  "panel.expand": "Expandir painel de objetos",
+  "panel.collapse": "Recolher painel de objetos",
+  "object.segment": "Segmento",
+  "object.line": "Reta",
+  "object.circle": "Círculo",
 };
 
 export const MESSAGES: Record<Locale, Record<MessageKey, string>> = { en, pt };

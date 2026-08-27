@@ -6,6 +6,7 @@ import type { AppAction, AppState } from './appState'
 import { DISK_RADIUS, toModel } from './disk'
 import type { Rect, XY } from './shapes'
 import { renderEntity } from './renderEntity'
+import { pointNames } from './naming'
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */
 const DISK_MARGIN = DISK_RADIUS + 10
@@ -87,7 +88,8 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   }
 
   const highlighted = new Set(toolState.buffer)
-  const opts = { highlighted, dragId }
+  const names = pointNames(construction)
+  const opts = { highlighted, dragId, names }
 
   // Strokes first, points on top, so points stay grabbable.
   const entities = state.construction.order.map((id) => construction.entities[id])

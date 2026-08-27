@@ -1,10 +1,11 @@
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import type { ToolState } from "../engine";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
 import { appReducer, initialAppState } from "./appState";
 import { ConstructionCanvas } from "./ConstructionCanvas";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ObjectPanel } from "./ObjectPanel";
 import { Toolbar } from "./Toolbar";
 import "./construction.css";
 
@@ -26,6 +27,7 @@ function hintKey(toolState: ToolState): MessageKey {
 
 export function ConstructionApp() {
   const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
   const { t } = useI18n();
 
   return (
@@ -37,7 +39,14 @@ export function ConstructionApp() {
         />
         <LanguageSwitcher />
       </header>
-      <ConstructionCanvas state={state} dispatch={dispatch} />
+      <div className="app-body">
+        <ObjectPanel
+          construction={state.construction}
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed((c) => !c)}
+        />
+        <ConstructionCanvas state={state} dispatch={dispatch} />
+      </div>
       <footer className="hint-bar">{t(hintKey(state.toolState))}</footer>
     </div>
   );

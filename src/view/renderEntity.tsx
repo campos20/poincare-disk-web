@@ -21,6 +21,8 @@ export interface RenderOptions {
   readonly highlighted: ReadonlySet<EntityId>
   /** Point currently being dragged. */
   readonly dragId: EntityId | null
+  /** Display names for points, keyed by id (see naming.ts). */
+  readonly names: ReadonlyMap<EntityId, string>
 }
 
 function pointClass(id: EntityId, opts: RenderOptions): string {
@@ -51,15 +53,22 @@ export function renderEntity(
   switch (entity.kind) {
     case 'point': {
       const p = toScreen(entity)
+      const name = opts.names.get(entity.id)
       return (
-        <circle
-          key={entity.id}
-          data-point-id={entity.id}
-          className={pointClass(entity.id, opts)}
-          cx={p.x}
-          cy={p.y}
-          r={5}
-        />
+        <g key={entity.id}>
+          <circle
+            data-point-id={entity.id}
+            className={pointClass(entity.id, opts)}
+            cx={p.x}
+            cy={p.y}
+            r={5}
+          />
+          {name && (
+            <text className="point-label" x={p.x + 8} y={p.y - 8}>
+              {name}
+            </text>
+          )}
+        </g>
       )
     }
     case 'segment': {
