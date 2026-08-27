@@ -53,7 +53,10 @@ export function Toolbar({ active, onSelect }: Props) {
   useEffect(() => {
     if (openGroup === null) return;
     const closeIfOutside = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpenGroup(null);
+      const target = e.target;
+      if (rootRef.current && target instanceof Node && !rootRef.current.contains(target)) {
+        setOpenGroup(null);
+      }
     };
     const closeOnEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpenGroup(null);

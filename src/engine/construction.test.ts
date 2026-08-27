@@ -193,13 +193,13 @@ describe('deleteEntity', () => {
     const p2 = addFreePoint(p1.construction, 10, 0)
     const p3 = addFreePoint(p2.construction, 5, 5)
     const seg = addSegment(p3.construction, p1.id, p2.id)
-    const circle = addSegment(seg.construction, p1.id, p3.id)
+    const seg2 = addSegment(seg.construction, p1.id, p3.id)
 
-    const after = deleteEntity(circle.construction, p1.id)
+    const after = deleteEntity(seg2.construction, p1.id)
 
     expect(getPoint(after, p1.id)).toBeNull()
     expect(after.entities[seg.id]).toBeUndefined()
-    expect(after.entities[circle.id]).toBeUndefined()
+    expect(after.entities[seg2.id]).toBeUndefined()
     // The uninvolved point survives.
     expect(getPoint(after, p2.id)).not.toBeNull()
     expect(getPoint(after, p3.id)).not.toBeNull()

@@ -34,8 +34,13 @@ function strokeClass(entity: Entity, opts: RenderOptions, extra = ''): string {
   return `ent-stroke${extra}${buffered}${selected}`
 }
 
-function strokeStyle(entity: Entity): CSSProperties | undefined {
-  return entity.color ? { stroke: entity.color } : undefined
+// A custom color is skipped while the entity is buffered by the active
+// tool (e.g. the first pick for the intersect tool) so the buffered
+// feedback color — applied via the .ent-stroke.buffered CSS class — isn't
+// overridden by this inline style, which otherwise always wins.
+function strokeStyle(entity: Entity, opts: RenderOptions): CSSProperties | undefined {
+  const buffered = opts.highlighted.has(entity.id)
+  return !buffered && entity.color ? { stroke: entity.color } : undefined
 }
 
 function pointClass(entity: Entity, opts: RenderOptions): string {
@@ -112,7 +117,7 @@ export function renderEntity(
       return (
         <g key={entity.id} data-entity-id={entity.id}>
           <path className="ent-hit" d={d} />
-          <path className={strokeClass(entity, opts)} style={strokeStyle(entity)} d={d} />
+          <path className={strokeClass(entity, opts)} style={strokeStyle(entity, opts)} d={d} />
         </g>
       )
     }
@@ -127,7 +132,7 @@ export function renderEntity(
       return (
         <g key={entity.id} data-entity-id={entity.id}>
           <path className="ent-hit" d={d} />
-          <path className={strokeClass(entity, opts, ' ent-line')} style={strokeStyle(entity)} d={d} />
+          <path className={strokeClass(entity, opts, ' ent-line')} style={strokeStyle(entity, opts)} d={d} />
         </g>
       )
     }
@@ -147,7 +152,7 @@ export function renderEntity(
           <circle className="ent-hit" cx={c.x} cy={c.y} r={r} />
           <circle
             className={strokeClass(entity, opts)}
-            style={strokeStyle(entity)}
+            style={strokeStyle(entity, opts)}
             cx={c.x}
             cy={c.y}
             r={r}
