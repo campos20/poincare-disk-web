@@ -12,8 +12,14 @@ import {
 } from './construction'
 import type { Construction, EntityId } from './types'
 
-/** Snap radius in svg units: clicks within this reuse an existing point. */
-export const SNAP_THRESHOLD = 12
+/**
+ * Snap radius in model units: clicks within this reuse an existing point.
+ * The unit disk has radius 1, so this is a plain model-space constant with
+ * no dependency on the view's current pixel scale — the view converts
+ * screen coordinates to model space before ever calling into the engine, so
+ * a display-scale change never needs a matching change here.
+ */
+export const SNAP_THRESHOLD = 0.04
 
 export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle'
 

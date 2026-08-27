@@ -3,8 +3,8 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { findPointNear, SNAP_THRESHOLD } from '../engine'
 import { useI18n } from '../i18n/context'
 import type { AppAction, AppState } from './appState'
-import { DISK_RADIUS } from './disk'
-import type { Rect, XY } from './geometry'
+import { DISK_RADIUS, toModel } from './disk'
+import type { Rect, XY } from './shapes'
 import { renderEntity } from './renderEntity'
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */
@@ -61,21 +61,25 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     const pt = eventCoords(e)
     if (!pt) return
+    const model = toModel(pt)
     if (toolState.tool === 'select') {
-      const id = findPointNear(construction, pt.x, pt.y, SNAP_THRESHOLD)
+      const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD)
       if (id !== null) {
         e.currentTarget.setPointerCapture(e.pointerId)
         dispatch({ type: 'dragStart', id })
       }
     } else {
-      dispatch({ type: 'canvasClick', x: pt.x, y: pt.y })
+      dispatch({ type: 'canvasClick', x: model.x, y: model.y })
     }
   }
 
   const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (dragId === null) return
     const pt = eventCoords(e)
-    if (pt) dispatch({ type: 'dragMove', x: pt.x, y: pt.y })
+    if (pt) {
+      const model = toModel(pt)
+      dispatch({ type: 'dragMove', x: model.x, y: model.y })
+    }
   }
 
   const endDrag = () => {
@@ -83,7 +87,7 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   }
 
   const highlighted = new Set(toolState.buffer)
-  const opts = { viewport, highlighted, dragId }
+  const opts = { highlighted, dragId }
 
   // Strokes first, points on top, so points stay grabbable.
   const entities = state.construction.order.map((id) => construction.entities[id])

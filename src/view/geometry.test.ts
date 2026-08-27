@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { circleShape, clipLineToRect, distance, lineShape, segmentShape } from './geometry'
-import type { Rect } from './geometry'
+import type { Rect } from './shapes'
 
 const rect: Rect = { minX: -100, minY: -100, maxX: 100, maxY: 100 }
 

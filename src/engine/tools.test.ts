@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addFreePoint, allPoints, emptyConstruction, getPoint } from './construction'
-import { applyClick, initialToolState, selectTool } from './tools'
+import { applyClick, initialToolState, selectTool, SNAP_THRESHOLD } from './tools'
 import type { ToolState } from './tools'
 
 const tool = (id: ToolState['tool']): ToolState => ({ tool: id, buffer: [] })
@@ -23,9 +23,28 @@ describe('point tool', () => {
 
   it('snaps onto an existing point instead of stacking a duplicate', () => {
     const { construction } = addFreePoint(emptyConstruction(), 42, 17)
-    const result = applyClick(construction, tool('point'), 45, 17)
+    const result = applyClick(construction, tool('point'), 45, 17, 12)
     expect(result.created).toBeNull()
     expect(allPoints(result.construction)).toHaveLength(1)
+  })
+})
+
+describe('default snap threshold', () => {
+  // The tests above pass an explicit threshold so they can use readable,
+  // arbitrary-scale coordinates independent of SNAP_THRESHOLD's actual
+  // value. This one instead exercises applyClick's real default, at
+  // fractions of SNAP_THRESHOLD itself so it stays correct if that value
+  // is ever retuned.
+  it('snaps within SNAP_THRESHOLD and creates a new point just beyond it', () => {
+    const { construction } = addFreePoint(emptyConstruction(), 0.5, 0.5)
+
+    const inside = applyClick(construction, tool('point'), 0.5 + SNAP_THRESHOLD * 0.9, 0.5)
+    expect(inside.created).toBeNull()
+    expect(allPoints(inside.construction)).toHaveLength(1)
+
+    const outside = applyClick(construction, tool('point'), 0.5 + SNAP_THRESHOLD * 1.1, 0.5)
+    expect(outside.created).not.toBeNull()
+    expect(allPoints(outside.construction)).toHaveLength(2)
   })
 })
 
@@ -48,7 +67,7 @@ describe('two-point tools', () => {
 
   it('reuses an existing point as an endpoint via snapping', () => {
     const existing = addFreePoint(emptyConstruction(), 0, 0)
-    const first = applyClick(existing.construction, tool('segment'), 5, 3)
+    const first = applyClick(existing.construction, tool('segment'), 5, 3, 12)
     expect(first.toolState.buffer).toEqual([existing.id])
     expect(allPoints(first.construction)).toHaveLength(1)
   })
@@ -58,8 +77,8 @@ describe('two-point tools', () => {
     state = applyClick(state.construction, state.toolState, 100, 0)
     const segA = state.construction.entities[state.created!]
 
-    state = applyClick(state.construction, state.toolState, 98, 2) // snaps to (100, 0)
-    state = applyClick(state.construction, state.toolState, 200, 50)
+    state = applyClick(state.construction, state.toolState, 98, 2, 12) // snaps to (100, 0)
+    state = applyClick(state.construction, state.toolState, 200, 50, 12)
     const segB = state.construction.entities[state.created!]
 
     if (segA.kind !== 'segment' || segB.kind !== 'segment') throw new Error('expected segments')
@@ -69,7 +88,7 @@ describe('two-point tools', () => {
 
   it('ignores a second click on the already-buffered point', () => {
     const first = applyClick(emptyConstruction(), tool('segment'), 0, 0)
-    const second = applyClick(first.construction, first.toolState, 3, 3) // snaps to buffered point
+    const second = applyClick(first.construction, first.toolState, 3, 3, 12) // snaps to buffered point
     expect(second.created).toBeNull()
     expect(second.toolState.buffer).toHaveLength(1)
     expect(allPoints(second.construction)).toHaveLength(1)
