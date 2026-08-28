@@ -24,6 +24,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npx prettier --check .
       - run: npm test
       - run: npm run build
       # SPA fallback: GitHub Pages has no server-side rewrite, so deep links
