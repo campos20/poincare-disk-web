@@ -4,19 +4,29 @@
  * other host) can consume them directly.
  */
 
-import type { Construction, Entity, EntityId, FreePoint, IntersectionPoint, PointEntity } from './types'
+import type {
+  Construction,
+  Entity,
+  EntityId,
+  FreePoint,
+  IntersectionPoint,
+  PointEntity,
+} from "./types";
 
 export function emptyConstruction(): Construction {
-  return { entities: {}, order: [], nextId: 1 }
+  return { entities: {}, order: [], nextId: 1 };
 }
 
 export interface AddResult {
-  readonly construction: Construction
-  readonly id: EntityId
+  readonly construction: Construction;
+  readonly id: EntityId;
 }
 
-function withEntity(c: Construction, make: (id: EntityId) => Entity): AddResult {
-  const id = `e${c.nextId}`
+function withEntity(
+  c: Construction,
+  make: (id: EntityId) => Entity,
+): AddResult {
+  const id = `e${c.nextId}`;
   return {
     construction: {
       entities: { ...c.entities, [id]: make(id) },
@@ -24,23 +34,59 @@ function withEntity(c: Construction, make: (id: EntityId) => Entity): AddResult 
       nextId: c.nextId + 1,
     },
     id,
-  }
+  };
 }
 
 export function addFreePoint(c: Construction, x: number, y: number): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'point', x, y, color: null, hidden: false }))
+  return withEntity(c, (id) => ({
+    id,
+    kind: "point",
+    x,
+    y,
+    color: null,
+    hidden: false,
+  }));
 }
 
-export function addSegment(c: Construction, a: EntityId, b: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'segment', a, b, color: null, hidden: false }))
+export function addSegment(
+  c: Construction,
+  a: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "segment",
+    a,
+    b,
+    color: null,
+    hidden: false,
+  }));
 }
 
 export function addLine(c: Construction, a: EntityId, b: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'line', a, b, color: null, hidden: false }))
+  return withEntity(c, (id) => ({
+    id,
+    kind: "line",
+    a,
+    b,
+    color: null,
+    hidden: false,
+  }));
 }
 
-export function addCircle(c: Construction, center: EntityId, thru: EntityId): AddResult {
-  return withEntity(c, (id) => ({ id, kind: 'circle', center, thru, color: null, hidden: false }))
+export function addCircle(
+  c: Construction,
+  center: EntityId,
+  thru: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "circle",
+    center,
+    thru,
+    color: null,
+    hidden: false,
+  }));
 }
 
 /**
@@ -61,7 +107,7 @@ export function addIntersectionPoint(
 ): AddResult {
   return withEntity(c, (id) => ({
     id,
-    kind: 'intersection',
+    kind: "intersection",
     x,
     y,
     a,
@@ -70,11 +116,11 @@ export function addIntersectionPoint(
     exists: true,
     color: null,
     hidden: false,
-  }))
+  }));
 }
 
 function isPoint(e: Entity): e is PointEntity {
-  return e.kind === 'point' || e.kind === 'intersection'
+  return e.kind === "point" || e.kind === "intersection";
 }
 
 /**
@@ -86,20 +132,20 @@ function isPoint(e: Entity): e is PointEntity {
  * `c.entities[id]` for things like the object panel that list it either way.
  */
 export function getPoint(c: Construction, id: EntityId): PointEntity | null {
-  const e = c.entities[id]
-  if (!e || !isPoint(e)) return null
-  if (e.kind === 'intersection' && !e.exists) return null
-  return e
+  const e = c.entities[id];
+  if (!e || !isPoint(e)) return null;
+  if (e.kind === "intersection" && !e.exists) return null;
+  return e;
 }
 
 /** All point entities (free or intersection) in insertion order. */
 export function allPoints(c: Construction): readonly PointEntity[] {
-  const out: PointEntity[] = []
+  const out: PointEntity[] = [];
   for (const id of c.order) {
-    const e = c.entities[id]
-    if (isPoint(e)) out.push(e)
+    const e = c.entities[id];
+    if (isPoint(e)) out.push(e);
   }
-  return out
+  return out;
 }
 
 /**
@@ -109,11 +155,16 @@ export function allPoints(c: Construction): readonly PointEntity[] {
  * coordinates through `recomputeIntersections` below — so this is a no-op
  * for any id that isn't a `FreePoint`.
  */
-export function movePoint(c: Construction, id: EntityId, x: number, y: number): Construction {
-  const e = c.entities[id]
-  if (!e || e.kind !== 'point') return c
-  const moved: FreePoint = { ...e, x, y }
-  return { ...c, entities: { ...c.entities, [id]: moved } }
+export function movePoint(
+  c: Construction,
+  id: EntityId,
+  x: number,
+  y: number,
+): Construction {
+  const e = c.entities[id];
+  if (!e || e.kind !== "point") return c;
+  const moved: FreePoint = { ...e, x, y };
+  return { ...c, entities: { ...c.entities, [id]: moved } };
 }
 
 /**
@@ -141,22 +192,22 @@ export function recomputeIntersections(
     branch: 0 | 1,
   ) => { readonly x: number; readonly y: number } | null,
 ): Construction {
-  let entities = c.entities
+  let entities = c.entities;
   for (const id of c.order) {
-    const e = entities[id]
-    if (e.kind !== 'intersection') continue
-    const p = compute({ ...c, entities }, e.a, e.b, e.branch)
+    const e = entities[id];
+    if (e.kind !== "intersection") continue;
+    const p = compute({ ...c, entities }, e.a, e.b, e.branch);
     if (p) {
       if (!e.exists || p.x !== e.x || p.y !== e.y) {
-        const moved: IntersectionPoint = { ...e, x: p.x, y: p.y, exists: true }
-        entities = { ...entities, [id]: moved }
+        const moved: IntersectionPoint = { ...e, x: p.x, y: p.y, exists: true };
+        entities = { ...entities, [id]: moved };
       }
     } else if (e.exists) {
-      const vanished: IntersectionPoint = { ...e, exists: false }
-      entities = { ...entities, [id]: vanished }
+      const vanished: IntersectionPoint = { ...e, exists: false };
+      entities = { ...entities, [id]: vanished };
     }
   }
-  return entities === c.entities ? c : { ...c, entities }
+  return entities === c.entities ? c : { ...c, entities };
 }
 
 /**
@@ -173,22 +224,22 @@ export function findPointNear(
   y: number,
   threshold: number,
 ): EntityId | null {
-  let best: EntityId | null = null
-  let bestDist = threshold
+  let best: EntityId | null = null;
+  let bestDist = threshold;
   for (const p of allPoints(c)) {
-    if (p.kind === 'intersection' && !p.exists) continue
-    const d = Math.hypot(p.x - x, p.y - y)
+    if (p.kind === "intersection" && !p.exists) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
     if (d <= bestDist) {
-      best = p.id
-      bestDist = d
+      best = p.id;
+      bestDist = d;
     }
   }
-  return best
+  return best;
 }
 
 export interface AcquireResult extends AddResult {
   /** true if a new point was created, false if an existing one was reused. */
-  readonly created: boolean
+  readonly created: boolean;
 }
 
 /** Snap to an existing point within `threshold`, else create a free point. */
@@ -198,36 +249,44 @@ export function acquirePoint(
   y: number,
   threshold: number,
 ): AcquireResult {
-  const near = findPointNear(c, x, y, threshold)
-  if (near !== null) return { construction: c, id: near, created: false }
-  return { ...addFreePoint(c, x, y), created: true }
+  const near = findPointNear(c, x, y, threshold);
+  if (near !== null) return { construction: c, id: near, created: false };
+  return { ...addFreePoint(c, x, y), created: true };
 }
 
 /** Set (or clear, with `null`) an entity's explicit color override. */
-export function setColor(c: Construction, id: EntityId, color: string | null): Construction {
-  const e = c.entities[id]
-  if (!e) return c
-  return { ...c, entities: { ...c.entities, [id]: { ...e, color } } }
+export function setColor(
+  c: Construction,
+  id: EntityId,
+  color: string | null,
+): Construction {
+  const e = c.entities[id];
+  if (!e) return c;
+  return { ...c, entities: { ...c.entities, [id]: { ...e, color } } };
 }
 
 /** Show or hide an entity on the canvas without deleting it. */
-export function setHidden(c: Construction, id: EntityId, hidden: boolean): Construction {
-  const e = c.entities[id]
-  if (!e) return c
-  return { ...c, entities: { ...c.entities, [id]: { ...e, hidden } } }
+export function setHidden(
+  c: Construction,
+  id: EntityId,
+  hidden: boolean,
+): Construction {
+  const e = c.entities[id];
+  if (!e) return c;
+  return { ...c, entities: { ...c.entities, [id]: { ...e, hidden } } };
 }
 
 /** The other entities an entity can't exist without. */
 function dependencies(e: Entity): readonly EntityId[] {
   switch (e.kind) {
-    case 'point':
-      return []
-    case 'intersection':
-    case 'segment':
-    case 'line':
-      return [e.a, e.b]
-    case 'circle':
-      return [e.center, e.thru]
+    case "point":
+      return [];
+    case "intersection":
+    case "segment":
+    case "line":
+      return [e.a, e.b];
+    case "circle":
+      return [e.center, e.thru];
   }
 }
 
@@ -241,22 +300,22 @@ function dependencies(e: Entity): readonly EntityId[] {
  * this repeats until a pass finds nothing new.
  */
 export function deleteEntity(c: Construction, id: EntityId): Construction {
-  if (!(id in c.entities)) return c
+  if (!(id in c.entities)) return c;
 
-  const doomed = new Set<EntityId>([id])
-  let grew = true
+  const doomed = new Set<EntityId>([id]);
+  let grew = true;
   while (grew) {
-    grew = false
+    grew = false;
     for (const e of Object.values(c.entities)) {
-      if (doomed.has(e.id)) continue
+      if (doomed.has(e.id)) continue;
       if (dependencies(e).some((dep) => doomed.has(dep))) {
-        doomed.add(e.id)
-        grew = true
+        doomed.add(e.id);
+        grew = true;
       }
     }
   }
 
-  const entities = { ...c.entities }
-  for (const doomedId of doomed) delete entities[doomedId]
-  return { ...c, entities, order: c.order.filter((oid) => !doomed.has(oid)) }
+  const entities = { ...c.entities };
+  for (const doomedId of doomed) delete entities[doomedId];
+  return { ...c, entities, order: c.order.filter((oid) => !doomed.has(oid)) };
 }

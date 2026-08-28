@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { addCircle, addFreePoint, addSegment, allPoints, emptyConstruction, getPoint } from "../engine";
+import {
+  addCircle,
+  addFreePoint,
+  addSegment,
+  allPoints,
+  emptyConstruction,
+  getPoint,
+} from "../engine";
 import type { EntityId } from "../engine";
 import { appReducer, initialAppState } from "./appState";
 import type { AppState } from "./appState";
@@ -28,12 +35,20 @@ describe("disk boundary guard", () => {
   });
 
   it("creates points from clicks inside the disk", () => {
-    const after = appReducer(withTool("point"), { type: "canvasClick", x: 0.2, y: 0.2 });
+    const after = appReducer(withTool("point"), {
+      type: "canvasClick",
+      x: 0.2,
+      y: 0.2,
+    });
     expect(allPoints(after.construction)).toHaveLength(1);
   });
 
   it("freezes a dragged point when the pointer leaves the disk", () => {
-    let state = appReducer(withTool("point"), { type: "canvasClick", x: 0.2, y: 0.2 });
+    let state = appReducer(withTool("point"), {
+      type: "canvasClick",
+      x: 0.2,
+      y: 0.2,
+    });
     const id = allPoints(state.construction)[0].id;
 
     state = appReducer(state, { type: "dragStart", id });
@@ -53,7 +68,10 @@ describe("disk boundary guard", () => {
 describe("object panel actions", () => {
   it("selectObject toggles the selection on and off", () => {
     const p = addFreePoint(emptyConstruction(), 0, 0);
-    let state: AppState = { ...initialAppState(), construction: p.construction };
+    let state: AppState = {
+      ...initialAppState(),
+      construction: p.construction,
+    };
 
     state = appReducer(state, { type: "selectObject", id: p.id });
     expect(state.selectedId).toBe(p.id);
@@ -64,15 +82,27 @@ describe("object panel actions", () => {
 
   it("setColor updates the entity's color override", () => {
     const p = addFreePoint(emptyConstruction(), 0, 0);
-    const state: AppState = { ...initialAppState(), construction: p.construction };
+    const state: AppState = {
+      ...initialAppState(),
+      construction: p.construction,
+    };
 
-    const after = appReducer(state, { type: "setColor", id: p.id, color: "#ff0000" });
-    expect(after.construction.entities[p.id]).toMatchObject({ color: "#ff0000" });
+    const after = appReducer(state, {
+      type: "setColor",
+      id: p.id,
+      color: "#ff0000",
+    });
+    expect(after.construction.entities[p.id]).toMatchObject({
+      color: "#ff0000",
+    });
   });
 
   it("toggleHidden flips visibility", () => {
     const p = addFreePoint(emptyConstruction(), 0, 0);
-    const state: AppState = { ...initialAppState(), construction: p.construction };
+    const state: AppState = {
+      ...initialAppState(),
+      construction: p.construction,
+    };
 
     const hidden = appReducer(state, { type: "toggleHidden", id: p.id });
     expect(hidden.construction.entities[p.id]).toMatchObject({ hidden: true });
@@ -143,7 +173,9 @@ describe("intersect tool", () => {
     state = appReducer(state, { type: "entityClick", id: circleB });
     expect(state.toolState.buffer).toHaveLength(0);
     expect(allPoints(state.construction)).toHaveLength(6); // + 2 intersection points
-    expect(allPoints(state.construction).filter((p) => p.kind === "intersection")).toHaveLength(2);
+    expect(
+      allPoints(state.construction).filter((p) => p.kind === "intersection"),
+    ).toHaveLength(2);
   });
 
   it("ignores entityClick outside the intersect tool", () => {
@@ -167,7 +199,9 @@ describe("intersect tool", () => {
     state = appReducer(state, { type: "entityClick", id: circleA });
     state = appReducer(state, { type: "entityClick", id: circleB });
 
-    const crossId = allPoints(state.construction).find((p) => p.kind === "intersection")!.id;
+    const crossId = allPoints(state.construction).find(
+      (p) => p.kind === "intersection",
+    )!.id;
     const before = getPoint(state.construction, crossId)!;
 
     state = appReducer(state, { type: "dragStart", id: c1 });

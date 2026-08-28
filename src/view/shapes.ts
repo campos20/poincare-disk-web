@@ -5,19 +5,19 @@
  */
 
 export interface XY {
-  readonly x: number
-  readonly y: number
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface Rect {
-  readonly minX: number
-  readonly minY: number
-  readonly maxX: number
-  readonly maxY: number
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
 }
 
 export interface CircleShape {
-  readonly cx: number
-  readonly cy: number
-  readonly r: number
+  readonly cx: number;
+  readonly cy: number;
+  readonly r: number;
 }

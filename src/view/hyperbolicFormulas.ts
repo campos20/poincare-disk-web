@@ -16,11 +16,11 @@
  * Add new formulas as additional named exports below.
  */
 
-import type { CircleShape, XY } from './shapes'
+import type { CircleShape, XY } from "./shapes";
 
 /** Euclidean distance from a point to the origin (the "d" in dA, dB, …). */
 export function distanceFromOrigin(p: XY): number {
-  return Math.hypot(p.x, p.y)
+  return Math.hypot(p.x, p.y);
 }
 
 /**
@@ -44,23 +44,28 @@ export function distanceFromOrigin(p: XY): number {
  * below is well above that noise floor and well below the `denom` of any
  * deliberately-distinct pair of points inside the disk.
  */
-export function orthogonalCircleThroughPoints(a: XY, b: XY): CircleShape | null {
-  const denom = 2 * (a.x * b.y - b.x * a.y)
-  if (Math.abs(denom) < 1e-9) return null
+export function orthogonalCircleThroughPoints(
+  a: XY,
+  b: XY,
+): CircleShape | null {
+  const denom = 2 * (a.x * b.y - b.x * a.y);
+  if (Math.abs(denom) < 1e-9) return null;
 
-  const dA = distanceFromOrigin(a)
-  const dB = distanceFromOrigin(b)
-  const dA2 = dA * dA
-  const dB2 = dB * dB
-  const p = dA2 + 1
-  const q = dB2 + 1
+  const dA = distanceFromOrigin(a);
+  const dB = distanceFromOrigin(b);
+  const dA2 = dA * dA;
+  const dB2 = dB * dB;
+  const p = dA2 + 1;
+  const q = dB2 + 1;
 
-  const cx = (b.y * p - a.y * q) / denom
-  const cy = (a.x * q - b.x * p) / denom
+  const cx = (b.y * p - a.y * q) / denom;
+  const cy = (a.x * q - b.x * p) / denom;
   const rSquared =
-    (-2 * p * q * (a.y * b.y + a.x * b.x) + dA2 * q * q + p * p * dB2) / (denom * denom) - 1
+    (-2 * p * q * (a.y * b.y + a.x * b.x) + dA2 * q * q + p * p * dB2) /
+      (denom * denom) -
+    1;
 
-  return { cx, cy, r: Math.sqrt(rSquared) }
+  return { cx, cy, r: Math.sqrt(rSquared) };
 }
 
 /**
@@ -77,40 +82,42 @@ export function orthogonalCircleThroughPoints(a: XY, b: XY): CircleShape | null 
  * `1 − dB²` alone is already positive for B inside the disk.
  */
 export function hyperbolicCircleThroughPoints(a: XY, b: XY): CircleShape {
-  const dA2 = a.x * a.x + a.y * a.y
-  const dB2 = b.x * b.x + b.y * b.y
-  const dot = a.x * b.x + a.y * b.y
-  const denom = 1 + dA2 - 2 * dot
-  const oneMinusDB2 = 1 - dB2
+  const dA2 = a.x * a.x + a.y * a.y;
+  const dB2 = b.x * b.x + b.y * b.y;
+  const dot = a.x * b.x + a.y * b.y;
+  const denom = 1 + dA2 - 2 * dot;
+  const oneMinusDB2 = 1 - dB2;
 
-  const cx = (a.x * oneMinusDB2) / denom
-  const cy = (a.y * oneMinusDB2) / denom
+  const cx = (a.x * oneMinusDB2) / denom;
+  const cy = (a.y * oneMinusDB2) / denom;
   const rSquared =
-    (dA2 * oneMinusDB2 * oneMinusDB2 - 2 * oneMinusDB2 * dot * denom + dB2 * denom * denom) /
-    (denom * denom)
+    (dA2 * oneMinusDB2 * oneMinusDB2 -
+      2 * oneMinusDB2 * dot * denom +
+      dB2 * denom * denom) /
+    (denom * denom);
 
-  return { cx, cy, r: Math.sqrt(rSquared) }
+  return { cx, cy, r: Math.sqrt(rSquared) };
 }
 
 /** An arc of the circle orthogonal to the unit circle, from p1 to p2. */
 export interface HyperbolicArc {
-  readonly kind: 'arc'
-  readonly p1: XY
-  readonly p2: XY
-  readonly r: number
+  readonly kind: "arc";
+  readonly p1: XY;
+  readonly p2: XY;
+  readonly r: number;
   /** SVG arc flags for sweeping from p1 to p2 along the disk-side arc. */
-  readonly largeArc: boolean
-  readonly sweep: boolean
+  readonly largeArc: boolean;
+  readonly sweep: boolean;
 }
 
 /** A diameter of the unit circle (the geodesic when A, B, O are collinear). */
 export interface HyperbolicDiameter {
-  readonly kind: 'diameter'
-  readonly p1: XY
-  readonly p2: XY
+  readonly kind: "diameter";
+  readonly p1: XY;
+  readonly p2: XY;
 }
 
-export type HyperbolicLine = HyperbolicArc | HyperbolicDiameter
+export type HyperbolicLine = HyperbolicArc | HyperbolicDiameter;
 
 /**
  * The hyperbolic line ("geodesic") through A and B, clipped to the part
@@ -131,42 +138,51 @@ export type HyperbolicLine = HyperbolicArc | HyperbolicDiameter
  *
  * Returns null when A and B coincide — a line needs two distinct points.
  */
-export function hyperbolicLineThroughPoints(a: XY, b: XY): HyperbolicLine | null {
-  if (a.x === b.x && a.y === b.y) return null
+export function hyperbolicLineThroughPoints(
+  a: XY,
+  b: XY,
+): HyperbolicLine | null {
+  if (a.x === b.x && a.y === b.y) return null;
 
-  const circle = orthogonalCircleThroughPoints(a, b)
+  const circle = orthogonalCircleThroughPoints(a, b);
   if (!circle) {
-    const dir = distanceFromOrigin(a) >= distanceFromOrigin(b) ? a : b
-    const d = distanceFromOrigin(dir)
-    return { kind: 'diameter', p1: { x: -dir.x / d, y: -dir.y / d }, p2: { x: dir.x / d, y: dir.y / d } }
+    const dir = distanceFromOrigin(a) >= distanceFromOrigin(b) ? a : b;
+    const d = distanceFromOrigin(dir);
+    return {
+      kind: "diameter",
+      p1: { x: -dir.x / d, y: -dir.y / d },
+      p2: { x: dir.x / d, y: dir.y / d },
+    };
   }
 
   // Intersections of `circle` with the unit circle, using that orthogonality
   // pins the distance from the origin to `circle`'s center at sqrt(r^2 + 1)
   // (see the invariant checked in the test file), which collapses the
   // general circle-circle intersection formula to this closed form.
-  const d2 = circle.cx * circle.cx + circle.cy * circle.cy
+  const d2 = circle.cx * circle.cx + circle.cy * circle.cy;
   const p1: XY = {
     x: (circle.cx - circle.r * circle.cy) / d2,
     y: (circle.cy + circle.r * circle.cx) / d2,
-  }
+  };
   const p2: XY = {
     x: (circle.cx + circle.r * circle.cy) / d2,
     y: (circle.cy - circle.r * circle.cx) / d2,
-  }
+  };
 
-  const angleFrom = (p: XY): number => Math.atan2(p.y - circle.cy, p.x - circle.cx)
-  const twoPi = 2 * Math.PI
-  const normalize = (theta: number): number => ((theta % twoPi) + twoPi) % twoPi
+  const angleFrom = (p: XY): number =>
+    Math.atan2(p.y - circle.cy, p.x - circle.cx);
+  const twoPi = 2 * Math.PI;
+  const normalize = (theta: number): number =>
+    ((theta % twoPi) + twoPi) % twoPi;
 
-  const theta1 = angleFrom(p1)
-  const spanToP2 = normalize(angleFrom(p2) - theta1)
-  const spanToA = normalize(angleFrom(a) - theta1)
+  const theta1 = angleFrom(p1);
+  const spanToP2 = normalize(angleFrom(p2) - theta1);
+  const spanToA = normalize(angleFrom(a) - theta1);
 
-  const sweep = spanToA <= spanToP2
-  const span = sweep ? spanToP2 : twoPi - spanToP2
+  const sweep = spanToA <= spanToP2;
+  const span = sweep ? spanToP2 : twoPi - spanToP2;
 
-  return { kind: 'arc', p1, p2, r: circle.r, largeArc: span > Math.PI, sweep }
+  return { kind: "arc", p1, p2, r: circle.r, largeArc: span > Math.PI, sweep };
 }
 
 /**
@@ -187,26 +203,38 @@ export function hyperbolicLineThroughPoints(a: XY, b: XY): HyperbolicLine | null
  *
  * Returns null when A and B coincide — a segment needs two distinct points.
  */
-export function hyperbolicSegmentThroughPoints(a: XY, b: XY): HyperbolicLine | null {
-  if (a.x === b.x && a.y === b.y) return null
+export function hyperbolicSegmentThroughPoints(
+  a: XY,
+  b: XY,
+): HyperbolicLine | null {
+  if (a.x === b.x && a.y === b.y) return null;
 
-  const circle = orthogonalCircleThroughPoints(a, b)
-  if (!circle) return { kind: 'diameter', p1: a, p2: b }
+  const circle = orthogonalCircleThroughPoints(a, b);
+  if (!circle) return { kind: "diameter", p1: a, p2: b };
 
-  const angleFrom = (p: XY): number => Math.atan2(p.y - circle.cy, p.x - circle.cx)
-  const twoPi = 2 * Math.PI
-  const normalize = (theta: number): number => ((theta % twoPi) + twoPi) % twoPi
+  const angleFrom = (p: XY): number =>
+    Math.atan2(p.y - circle.cy, p.x - circle.cx);
+  const twoPi = 2 * Math.PI;
+  const normalize = (theta: number): number =>
+    ((theta % twoPi) + twoPi) % twoPi;
 
-  const thetaA = angleFrom(a)
-  const spanCCW = normalize(angleFrom(b) - thetaA)
-  const midTheta = thetaA + spanCCW / 2
+  const thetaA = angleFrom(a);
+  const spanCCW = normalize(angleFrom(b) - thetaA);
+  const midTheta = thetaA + spanCCW / 2;
   const mid: XY = {
     x: circle.cx + circle.r * Math.cos(midTheta),
     y: circle.cy + circle.r * Math.sin(midTheta),
-  }
+  };
 
-  const sweep = distanceFromOrigin(mid) < 1
-  const span = sweep ? spanCCW : twoPi - spanCCW
+  const sweep = distanceFromOrigin(mid) < 1;
+  const span = sweep ? spanCCW : twoPi - spanCCW;
 
-  return { kind: 'arc', p1: a, p2: b, r: circle.r, largeArc: span > Math.PI, sweep }
+  return {
+    kind: "arc",
+    p1: a,
+    p2: b,
+    r: circle.r,
+    largeArc: span > Math.PI,
+    sweep,
+  };
 }

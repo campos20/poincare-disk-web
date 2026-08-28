@@ -13,102 +13,132 @@
  * whose curve extends beyond its two endpoints — between those endpoints.
  */
 
-import type { Circle, Construction, Entity, EntityId, Line, Segment } from '../engine'
-import { getPoint } from '../engine'
-import { distanceFromOrigin, hyperbolicCircleThroughPoints, orthogonalCircleThroughPoints } from './hyperbolicFormulas'
-import type { CircleShape, XY } from './shapes'
+import type {
+  Circle,
+  Construction,
+  Entity,
+  EntityId,
+  Line,
+  Segment,
+} from "../engine";
+import { getPoint } from "../engine";
+import {
+  distanceFromOrigin,
+  hyperbolicCircleThroughPoints,
+  orthogonalCircleThroughPoints,
+} from "./hyperbolicFormulas";
+import type { CircleShape, XY } from "./shapes";
 
-const EPS = 1e-9
+const EPS = 1e-9;
 
-export type IntersectableEntity = Segment | Line | Circle
+export type IntersectableEntity = Segment | Line | Circle;
 
 export function isIntersectable(e: Entity): e is IntersectableEntity {
-  return e.kind === 'segment' || e.kind === 'line' || e.kind === 'circle'
+  return e.kind === "segment" || e.kind === "line" || e.kind === "circle";
 }
 
 /** The full Euclidean curve a hyperbolic line/segment/circle lies on. */
 type Curve =
-  | { readonly kind: 'circle'; readonly cx: number; readonly cy: number; readonly r: number }
-  | { readonly kind: 'line'; readonly dx: number; readonly dy: number } // through the origin
+  | {
+      readonly kind: "circle";
+      readonly cx: number;
+      readonly cy: number;
+      readonly r: number;
+    }
+  | { readonly kind: "line"; readonly dx: number; readonly dy: number }; // through the origin
 
 function lineCurve(a: XY, b: XY): Curve | null {
-  const orthogonal = orthogonalCircleThroughPoints(a, b)
-  if (orthogonal) return { kind: 'circle', ...orthogonal }
-  const far = distanceFromOrigin(a) >= distanceFromOrigin(b) ? a : b
-  const len = distanceFromOrigin(far)
-  if (len < EPS) return null // a === b === origin: no line through them
-  return { kind: 'line', dx: far.x / len, dy: far.y / len }
+  const orthogonal = orthogonalCircleThroughPoints(a, b);
+  if (orthogonal) return { kind: "circle", ...orthogonal };
+  const far = distanceFromOrigin(a) >= distanceFromOrigin(b) ? a : b;
+  const len = distanceFromOrigin(far);
+  if (len < EPS) return null; // a === b === origin: no line through them
+  return { kind: "line", dx: far.x / len, dy: far.y / len };
 }
 
-function curveOfLineOrSegment(construction: Construction, entity: Line | Segment): Curve | null {
-  const a = getPoint(construction, entity.a)
-  const b = getPoint(construction, entity.b)
-  return a && b ? lineCurve(a, b) : null
+function curveOfLineOrSegment(
+  construction: Construction,
+  entity: Line | Segment,
+): Curve | null {
+  const a = getPoint(construction, entity.a);
+  const b = getPoint(construction, entity.b);
+  return a && b ? lineCurve(a, b) : null;
 }
 
-function curveOfCircle(construction: Construction, entity: Circle): Curve | null {
-  const center = getPoint(construction, entity.center)
-  const thru = getPoint(construction, entity.thru)
-  if (!center || !thru) return null
-  return { kind: 'circle', ...hyperbolicCircleThroughPoints(center, thru) }
+function curveOfCircle(
+  construction: Construction,
+  entity: Circle,
+): Curve | null {
+  const center = getPoint(construction, entity.center);
+  const thru = getPoint(construction, entity.thru);
+  if (!center || !thru) return null;
+  return { kind: "circle", ...hyperbolicCircleThroughPoints(center, thru) };
 }
 
-function curveOf(construction: Construction, entity: IntersectableEntity): Curve | null {
-  return entity.kind === 'circle'
+function curveOf(
+  construction: Construction,
+  entity: IntersectableEntity,
+): Curve | null {
+  return entity.kind === "circle"
     ? curveOfCircle(construction, entity)
-    : curveOfLineOrSegment(construction, entity)
+    : curveOfLineOrSegment(construction, entity);
 }
 
 /** Up to two solutions of two Euclidean circles' intersection. */
 function circleCircle(c1: CircleShape, c2: CircleShape): XY[] {
-  const dx = c2.cx - c1.cx
-  const dy = c2.cy - c1.cy
-  const d = Math.hypot(dx, dy)
-  if (d < EPS || d > c1.r + c2.r + EPS || d < Math.abs(c1.r - c2.r) - EPS) return []
-  const a = (c1.r * c1.r - c2.r * c2.r + d * d) / (2 * d)
-  const h = Math.sqrt(Math.max(0, c1.r * c1.r - a * a))
-  const mx = c1.cx + (a * dx) / d
-  const my = c1.cy + (a * dy) / d
-  if (h < EPS) return [{ x: mx, y: my }]
-  const ox = -dy * (h / d)
-  const oy = dx * (h / d)
+  const dx = c2.cx - c1.cx;
+  const dy = c2.cy - c1.cy;
+  const d = Math.hypot(dx, dy);
+  if (d < EPS || d > c1.r + c2.r + EPS || d < Math.abs(c1.r - c2.r) - EPS)
+    return [];
+  const a = (c1.r * c1.r - c2.r * c2.r + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, c1.r * c1.r - a * a));
+  const mx = c1.cx + (a * dx) / d;
+  const my = c1.cy + (a * dy) / d;
+  if (h < EPS) return [{ x: mx, y: my }];
+  const ox = -dy * (h / d);
+  const oy = dx * (h / d);
   return [
     { x: mx + ox, y: my + oy },
     { x: mx - ox, y: my - oy },
-  ]
+  ];
 }
 
 /** Up to two solutions of a line through the origin (direction dx,dy) and a circle. */
 function lineCircle(dx: number, dy: number, c: CircleShape): XY[] {
-  const t = c.cx * dx + c.cy * dy // projection of the circle's center onto the line
-  const closeX = t * dx
-  const closeY = t * dy
-  const hSquared = c.r * c.r - ((c.cx - closeX) ** 2 + (c.cy - closeY) ** 2)
-  if (hSquared < -EPS) return []
-  const h = Math.sqrt(Math.max(0, hSquared))
-  if (h < EPS) return [{ x: closeX, y: closeY }]
+  const t = c.cx * dx + c.cy * dy; // projection of the circle's center onto the line
+  const closeX = t * dx;
+  const closeY = t * dy;
+  const hSquared = c.r * c.r - ((c.cx - closeX) ** 2 + (c.cy - closeY) ** 2);
+  if (hSquared < -EPS) return [];
+  const h = Math.sqrt(Math.max(0, hSquared));
+  if (h < EPS) return [{ x: closeX, y: closeY }];
   return [
     { x: closeX + h * dx, y: closeY + h * dy },
     { x: closeX - h * dx, y: closeY - h * dy },
-  ]
+  ];
 }
 
 /** The origin, if two distinct lines through it aren't parallel. */
 function lineLine(d1x: number, d1y: number, d2x: number, d2y: number): XY[] {
-  const cross = d1x * d2y - d1y * d2x
-  return Math.abs(cross) < EPS ? [] : [{ x: 0, y: 0 }]
+  const cross = d1x * d2y - d1y * d2x;
+  return Math.abs(cross) < EPS ? [] : [{ x: 0, y: 0 }];
 }
 
 function intersectCurves(c1: Curve, c2: Curve): XY[] {
-  if (c1.kind === 'circle' && c2.kind === 'circle') return circleCircle(c1, c2)
-  if (c1.kind === 'circle' && c2.kind === 'line') return lineCircle(c2.dx, c2.dy, c1)
-  if (c1.kind === 'line' && c2.kind === 'circle') return lineCircle(c1.dx, c1.dy, c2)
-  if (c1.kind === 'line' && c2.kind === 'line') return lineLine(c1.dx, c1.dy, c2.dx, c2.dy)
-  return []
+  if (c1.kind === "circle" && c2.kind === "circle") return circleCircle(c1, c2);
+  if (c1.kind === "circle" && c2.kind === "line")
+    return lineCircle(c2.dx, c2.dy, c1);
+  if (c1.kind === "line" && c2.kind === "circle")
+    return lineCircle(c1.dx, c1.dy, c2);
+  if (c1.kind === "line" && c2.kind === "line")
+    return lineLine(c1.dx, c1.dy, c2.dx, c2.dy);
+  return [];
 }
 
-const TWO_PI = 2 * Math.PI
-const normalizeAngle = (theta: number): number => ((theta % TWO_PI) + TWO_PI) % TWO_PI
+const TWO_PI = 2 * Math.PI;
+const normalizeAngle = (theta: number): number =>
+  ((theta % TWO_PI) + TWO_PI) % TWO_PI;
 
 /**
  * Is `p` (already known to lie on the segment's curve) between its two
@@ -118,33 +148,40 @@ const normalizeAngle = (theta: number): number => ((theta % TWO_PI) + TWO_PI) % 
  * diameter, the one line) through A and B, the segment is whichever part
  * stays inside the disk.
  */
-function onSegmentSpan(construction: Construction, entity: Segment, p: XY): boolean {
-  const a = getPoint(construction, entity.a)
-  const b = getPoint(construction, entity.b)
-  if (!a || !b) return false
+function onSegmentSpan(
+  construction: Construction,
+  entity: Segment,
+  p: XY,
+): boolean {
+  const a = getPoint(construction, entity.a);
+  const b = getPoint(construction, entity.b);
+  if (!a || !b) return false;
 
-  const circle = orthogonalCircleThroughPoints(a, b)
+  const circle = orthogonalCircleThroughPoints(a, b);
   if (!circle) {
-    const abx = b.x - a.x
-    const aby = b.y - a.y
-    const len2 = abx * abx + aby * aby
-    if (len2 < EPS) return false
-    const t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2
-    if (t < -1e-6 || t > 1 + 1e-6) return false
-    const projX = a.x + t * abx
-    const projY = a.y + t * aby
-    return Math.hypot(p.x - projX, p.y - projY) < 1e-6
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const len2 = abx * abx + aby * aby;
+    if (len2 < EPS) return false;
+    const t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2;
+    if (t < -1e-6 || t > 1 + 1e-6) return false;
+    const projX = a.x + t * abx;
+    const projY = a.y + t * aby;
+    return Math.hypot(p.x - projX, p.y - projY) < 1e-6;
   }
 
-  const angleFrom = (q: XY) => Math.atan2(q.y - circle.cy, q.x - circle.cx)
-  const thetaA = angleFrom(a)
-  const spanCCW = normalizeAngle(angleFrom(b) - thetaA)
-  const midTheta = thetaA + spanCCW / 2
-  const mid: XY = { x: circle.cx + circle.r * Math.cos(midTheta), y: circle.cy + circle.r * Math.sin(midTheta) }
-  const sweep = distanceFromOrigin(mid) < 1
-  const spanToP = normalizeAngle(angleFrom(p) - thetaA)
-  const tol = 1e-6
-  return sweep ? spanToP <= spanCCW + tol : spanToP >= spanCCW - tol
+  const angleFrom = (q: XY) => Math.atan2(q.y - circle.cy, q.x - circle.cx);
+  const thetaA = angleFrom(a);
+  const spanCCW = normalizeAngle(angleFrom(b) - thetaA);
+  const midTheta = thetaA + spanCCW / 2;
+  const mid: XY = {
+    x: circle.cx + circle.r * Math.cos(midTheta),
+    y: circle.cy + circle.r * Math.sin(midTheta),
+  };
+  const sweep = distanceFromOrigin(mid) < 1;
+  const spanToP = normalizeAngle(angleFrom(p) - thetaA);
+  const tol = 1e-6;
+  return sweep ? spanToP <= spanCCW + tol : spanToP >= spanCCW - tol;
 }
 
 /** Every visible intersection point between two curve entities. */
@@ -153,14 +190,18 @@ export function intersectEntities(
   a: IntersectableEntity,
   b: IntersectableEntity,
 ): XY[] {
-  const curveA = curveOf(construction, a)
-  const curveB = curveOf(construction, b)
-  if (!curveA || !curveB) return []
+  const curveA = curveOf(construction, a);
+  const curveB = curveOf(construction, b);
+  if (!curveA || !curveB) return [];
 
-  let points = intersectCurves(curveA, curveB).filter((p) => distanceFromOrigin(p) < 1 - EPS)
-  if (a.kind === 'segment') points = points.filter((p) => onSegmentSpan(construction, a, p))
-  if (b.kind === 'segment') points = points.filter((p) => onSegmentSpan(construction, b, p))
-  return points
+  let points = intersectCurves(curveA, curveB).filter(
+    (p) => distanceFromOrigin(p) < 1 - EPS,
+  );
+  if (a.kind === "segment")
+    points = points.filter((p) => onSegmentSpan(construction, a, p));
+  if (b.kind === "segment")
+    points = points.filter((p) => onSegmentSpan(construction, b, p));
+  return points;
 }
 
 /**
@@ -175,8 +216,8 @@ export function computeIntersectionPoint(
   bId: EntityId,
   branch: 0 | 1,
 ): XY | null {
-  const a = construction.entities[aId]
-  const b = construction.entities[bId]
-  if (!a || !b || !isIntersectable(a) || !isIntersectable(b)) return null
-  return intersectEntities(construction, a, b)[branch] ?? null
+  const a = construction.entities[aId];
+  const b = construction.entities[bId];
+  if (!a || !b || !isIntersectable(a) || !isIntersectable(b)) return null;
+  return intersectEntities(construction, a, b)[branch] ?? null;
 }

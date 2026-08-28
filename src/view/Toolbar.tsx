@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Circle, Dot, Minus, MousePointer2, Slash, SquaresIntersect } from "lucide-react";
+import {
+  ChevronDown,
+  Circle,
+  Dot,
+  Minus,
+  MousePointer2,
+  Slash,
+  SquaresIntersect,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ToolId } from "../engine";
 import { useI18n } from "../i18n/context";
@@ -54,7 +62,11 @@ export function Toolbar({ active, onSelect }: Props) {
     if (openGroup === null) return;
     const closeIfOutside = (e: PointerEvent) => {
       const target = e.target;
-      if (rootRef.current && target instanceof Node && !rootRef.current.contains(target)) {
+      if (
+        rootRef.current &&
+        target instanceof Node &&
+        !rootRef.current.contains(target)
+      ) {
         setOpenGroup(null);
       }
     };
@@ -70,13 +82,20 @@ export function Toolbar({ active, onSelect }: Props) {
   }, [openGroup]);
 
   const pick = (groupIndex: number, tool: ToolId) => {
-    setLastPicked((prev) => prev.map((id, i) => (i === groupIndex ? tool : id)));
+    setLastPicked((prev) =>
+      prev.map((id, i) => (i === groupIndex ? tool : id)),
+    );
     setOpenGroup(null);
     onSelect(tool);
   };
 
   return (
-    <div className="toolbar" role="toolbar" aria-label={t("toolbar.aria")} ref={rootRef}>
+    <div
+      className="toolbar"
+      role="toolbar"
+      aria-label={t("toolbar.aria")}
+      ref={rootRef}
+    >
       <button
         type="button"
         className={active === "select" ? "tool-button active" : "tool-button"}
@@ -121,7 +140,11 @@ export function Toolbar({ active, onSelect }: Props) {
                       key={id}
                       type="button"
                       role="menuitem"
-                      className={id === active ? "tool-menu-item active" : "tool-menu-item"}
+                      className={
+                        id === active
+                          ? "tool-menu-item active"
+                          : "tool-menu-item"
+                      }
                       aria-pressed={id === active}
                       onClick={() => pick(i, id)}
                     >

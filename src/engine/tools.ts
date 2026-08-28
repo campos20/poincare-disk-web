@@ -4,13 +4,8 @@
  * satisfied, then the entity is created and the buffer resets.
  */
 
-import {
-  acquirePoint,
-  addCircle,
-  addLine,
-  addSegment,
-} from './construction'
-import type { Construction, EntityId } from './types'
+import { acquirePoint, addCircle, addLine, addSegment } from "./construction";
+import type { Construction, EntityId } from "./types";
 
 /**
  * Snap radius in model units: clicks within this reuse an existing point.
@@ -19,15 +14,16 @@ import type { Construction, EntityId } from './types'
  * screen coordinates to model space before ever calling into the engine, so
  * a display-scale change never needs a matching change here.
  */
-export const SNAP_THRESHOLD = 0.04
+export const SNAP_THRESHOLD = 0.04;
 
-export type ToolId = 'select' | 'point' | 'segment' | 'line' | 'circle' | 'intersect'
+export type ToolId =
+  "select" | "point" | "segment" | "line" | "circle" | "intersect";
 
 // Display names are presentation and live in the view's i18n layer;
 // the engine only knows stable ids and click counts.
 export interface ToolDef {
-  readonly id: ToolId
-  readonly pointsNeeded: number
+  readonly id: ToolId;
+  readonly pointsNeeded: number;
 }
 
 // 'intersect' clicks pick entities, not coordinates, so it needs geometry
@@ -37,43 +33,43 @@ export interface ToolDef {
 // math). It's still declared here so the toolbar/tool-switching machinery
 // treats it like any other tool.
 export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
-  select: { id: 'select', pointsNeeded: 0 },
-  point: { id: 'point', pointsNeeded: 1 },
-  segment: { id: 'segment', pointsNeeded: 2 },
-  line: { id: 'line', pointsNeeded: 2 },
-  circle: { id: 'circle', pointsNeeded: 2 },
-  intersect: { id: 'intersect', pointsNeeded: 2 },
-}
+  select: { id: "select", pointsNeeded: 0 },
+  point: { id: "point", pointsNeeded: 1 },
+  segment: { id: "segment", pointsNeeded: 2 },
+  line: { id: "line", pointsNeeded: 2 },
+  circle: { id: "circle", pointsNeeded: 2 },
+  intersect: { id: "intersect", pointsNeeded: 2 },
+};
 
 export const TOOL_ORDER: readonly ToolId[] = [
-  'select',
-  'point',
-  'segment',
-  'line',
-  'circle',
-  'intersect',
-]
+  "select",
+  "point",
+  "segment",
+  "line",
+  "circle",
+  "intersect",
+];
 
 export interface ToolState {
-  readonly tool: ToolId
+  readonly tool: ToolId;
   /** Point ids accumulated by clicks, in order. */
-  readonly buffer: readonly EntityId[]
+  readonly buffer: readonly EntityId[];
 }
 
 export function initialToolState(): ToolState {
-  return { tool: 'select', buffer: [] }
+  return { tool: "select", buffer: [] };
 }
 
 /** Switching tools always clears the in-progress buffer. */
 export function selectTool(_state: ToolState, tool: ToolId): ToolState {
-  return { tool, buffer: [] }
+  return { tool, buffer: [] };
 }
 
 export interface ClickResult {
-  readonly construction: Construction
-  readonly toolState: ToolState
+  readonly construction: Construction;
+  readonly toolState: ToolState;
   /** Id of the entity this click completed (for the point tool: the new point), or null. */
-  readonly created: EntityId | null
+  readonly created: EntityId | null;
 }
 
 /**
@@ -88,49 +84,49 @@ export function applyClick(
   y: number,
   threshold: number = SNAP_THRESHOLD,
 ): ClickResult {
-  const { tool, buffer } = toolState
-  if (tool === 'select') {
-    return { construction, toolState, created: null }
+  const { tool, buffer } = toolState;
+  if (tool === "select") {
+    return { construction, toolState, created: null };
   }
 
-  const acquired = acquirePoint(construction, x, y, threshold)
+  const acquired = acquirePoint(construction, x, y, threshold);
 
-  if (tool === 'point') {
+  if (tool === "point") {
     // Snapping makes dropping a point onto an existing one a no-op
     // rather than stacking an invisible duplicate.
     return {
       construction: acquired.construction,
       toolState,
       created: acquired.created ? acquired.id : null,
-    }
+    };
   }
 
   // Two-point tools: ignore a click that re-selects a buffered point —
   // a segment/line/circle needs two distinct points.
   if (buffer.includes(acquired.id)) {
-    return { construction: acquired.construction, toolState, created: null }
+    return { construction: acquired.construction, toolState, created: null };
   }
 
-  const nextBuffer = [...buffer, acquired.id]
+  const nextBuffer = [...buffer, acquired.id];
   if (nextBuffer.length < TOOLS[tool].pointsNeeded) {
     return {
       construction: acquired.construction,
       toolState: { tool, buffer: nextBuffer },
       created: null,
-    }
+    };
   }
 
-  const [a, b] = nextBuffer as [EntityId, EntityId]
+  const [a, b] = nextBuffer as [EntityId, EntityId];
   const added =
-    tool === 'segment'
+    tool === "segment"
       ? addSegment(acquired.construction, a, b)
-      : tool === 'line'
+      : tool === "line"
         ? addLine(acquired.construction, a, b)
-        : addCircle(acquired.construction, a, b)
+        : addCircle(acquired.construction, a, b);
 
   return {
     construction: added.construction,
     toolState: { tool, buffer: [] },
     created: added.id,
-  }
+  };
 }
