@@ -6,7 +6,10 @@ import { MESSAGES } from "./messages";
 import type { Locale } from "./messages";
 
 function detectLocale(): Locale {
-  if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("pt")) {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.language.toLowerCase().startsWith("pt")
+  ) {
     return "pt";
   }
   return "en";

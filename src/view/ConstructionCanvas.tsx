@@ -1,116 +1,132 @@
-import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
-import { findPointNear, SNAP_THRESHOLD } from '../engine'
-import { useI18n } from '../i18n/context'
-import type { AppAction, AppState } from './appState'
-import { DISK_RADIUS, toModel } from './disk'
-import type { Rect, XY } from './shapes'
-import { renderEntity } from './renderEntity'
-import { pointNames } from './naming'
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { findPointNear, SNAP_THRESHOLD } from "../engine";
+import { useI18n } from "../i18n/context";
+import type { AppAction, AppState } from "./appState";
+import { DISK_RADIUS, toModel } from "./disk";
+import type { Rect, XY } from "./shapes";
+import { renderEntity } from "./renderEntity";
+import { pointNames } from "./naming";
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */
-const DISK_MARGIN = DISK_RADIUS + 10
+const DISK_MARGIN = DISK_RADIUS + 10;
 
 /**
  * A viewBox centered on the origin matching the element's aspect ratio, so
  * the disk fills the short dimension on any screen with no letterboxing.
  */
 function fitViewport(width: number, height: number): Rect {
-  const aspect = width / height
-  const halfW = aspect >= 1 ? DISK_MARGIN * aspect : DISK_MARGIN
-  const halfH = aspect >= 1 ? DISK_MARGIN : DISK_MARGIN / aspect
-  return { minX: -halfW, minY: -halfH, maxX: halfW, maxY: halfH }
+  const aspect = width / height;
+  const halfW = aspect >= 1 ? DISK_MARGIN * aspect : DISK_MARGIN;
+  const halfH = aspect >= 1 ? DISK_MARGIN : DISK_MARGIN / aspect;
+  return { minX: -halfW, minY: -halfH, maxX: halfW, maxY: halfH };
 }
 
 interface Props {
-  readonly state: AppState
-  readonly dispatch: (action: AppAction) => void
+  readonly state: AppState;
+  readonly dispatch: (action: AppAction) => void;
 }
 
 /** Screen (client) coords → svg user coords, respecting viewBox scaling. */
-function toSvgCoords(svg: SVGSVGElement, clientX: number, clientY: number): XY | null {
-  const ctm = svg.getScreenCTM()
-  if (!ctm) return null
-  const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse())
-  return { x: p.x, y: p.y }
+function toSvgCoords(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number,
+): XY | null {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
 }
 
 export function ConstructionCanvas({ state, dispatch }: Props) {
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const { t } = useI18n()
-  const { construction, toolState, dragId, selectedId } = state
-  const [viewport, setViewport] = useState<Rect>(() => fitViewport(4, 3))
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const { t } = useI18n();
+  const { construction, toolState, dragId, selectedId } = state;
+  const [viewport, setViewport] = useState<Rect>(() => fitViewport(4, 3));
 
   useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
+    const svg = svgRef.current;
+    if (!svg) return;
     const update = () => {
-      const { width, height } = svg.getBoundingClientRect()
-      if (width > 0 && height > 0) setViewport(fitViewport(width, height))
-    }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(svg)
-    return () => observer.disconnect()
-  }, [])
+      const { width, height } = svg.getBoundingClientRect();
+      if (width > 0 && height > 0) setViewport(fitViewport(width, height));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
 
   const eventCoords = (e: ReactPointerEvent<SVGSVGElement>): XY | null => {
-    const svg = svgRef.current
-    return svg ? toSvgCoords(svg, e.clientX, e.clientY) : null
-  }
+    const svg = svgRef.current;
+    return svg ? toSvgCoords(svg, e.clientX, e.clientY) : null;
+  };
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (toolState.tool === 'intersect') {
+    if (toolState.tool === "intersect") {
       // The intersect tool picks entities by what was actually clicked
       // (see renderEntity's invisible `.ent-hit` overlays), not by nearest
       // coordinate — an entirely different click model from the other
       // tools, so it bypasses the coordinate-based canvasClick action.
-      const target = e.target as Element
-      const id = target.closest('[data-entity-id]')?.getAttribute('data-entity-id')
-      if (id) dispatch({ type: 'entityClick', id })
-      return
+      const target = e.target as Element;
+      const id = target
+        .closest("[data-entity-id]")
+        ?.getAttribute("data-entity-id");
+      if (id) dispatch({ type: "entityClick", id });
+      return;
     }
 
-    const pt = eventCoords(e)
-    if (!pt) return
-    const model = toModel(pt)
-    if (toolState.tool === 'select') {
-      const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD)
+    const pt = eventCoords(e);
+    if (!pt) return;
+    const model = toModel(pt);
+    if (toolState.tool === "select") {
+      const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD);
       // Intersection points are derived, not draggable — don't start a
       // drag that movePoint would just ignore.
-      if (id !== null && construction.entities[id]?.kind === 'point') {
-        e.currentTarget.setPointerCapture(e.pointerId)
-        dispatch({ type: 'dragStart', id })
+      if (id !== null && construction.entities[id]?.kind === "point") {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dispatch({ type: "dragStart", id });
       }
     } else {
-      dispatch({ type: 'canvasClick', x: model.x, y: model.y })
+      dispatch({ type: "canvasClick", x: model.x, y: model.y });
     }
-  }
+  };
 
   const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (dragId === null) return
-    const pt = eventCoords(e)
+    if (dragId === null) return;
+    const pt = eventCoords(e);
     if (pt) {
-      const model = toModel(pt)
-      dispatch({ type: 'dragMove', x: model.x, y: model.y })
+      const model = toModel(pt);
+      dispatch({ type: "dragMove", x: model.x, y: model.y });
     }
-  }
+  };
 
   const endDrag = () => {
-    if (dragId !== null) dispatch({ type: 'dragEnd' })
-  }
+    if (dragId !== null) dispatch({ type: "dragEnd" });
+  };
 
-  const highlighted = new Set(toolState.buffer)
-  const names = pointNames(construction)
-  const opts = { highlighted, dragId, names, selectedId }
+  const highlighted = new Set(toolState.buffer);
+  const names = pointNames(construction);
+  const opts = { highlighted, dragId, names, selectedId };
 
   // Strokes first, points on top, so points stay grabbable.
-  const entities = state.construction.order.map((id) => construction.entities[id])
-  const strokes = entities.filter((ent) => ent.kind !== 'point' && ent.kind !== 'intersection')
-  const points = entities.filter((ent) => ent.kind === 'point' || ent.kind === 'intersection')
+  const entities = state.construction.order.map(
+    (id) => construction.entities[id],
+  );
+  const strokes = entities.filter(
+    (ent) => ent.kind !== "point" && ent.kind !== "intersection",
+  );
+  const points = entities.filter(
+    (ent) => ent.kind === "point" || ent.kind === "intersection",
+  );
 
   const mode =
-    toolState.tool === 'select' ? 'mode-select' : toolState.tool === 'intersect' ? 'mode-intersect' : 'mode-build'
+    toolState.tool === "select"
+      ? "mode-select"
+      : toolState.tool === "intersect"
+        ? "mode-intersect"
+        : "mode-build";
 
   return (
     <svg
@@ -121,12 +137,12 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      aria-label={t('canvas.aria')}
+      aria-label={t("canvas.aria")}
     >
       {/* The Poincaré disk: the space itself. Outside it, nothing exists. */}
       <circle className="poincare-disk" cx={0} cy={0} r={DISK_RADIUS} />
       {strokes.map((ent) => renderEntity(construction, ent, opts))}
       {points.map((ent) => renderEntity(construction, ent, opts))}
     </svg>
-  )
+  );
 }

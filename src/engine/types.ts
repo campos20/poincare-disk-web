@@ -7,7 +7,7 @@
  * updates every dependent entity for free.
  */
 
-export type EntityId = string
+export type EntityId = string;
 
 /**
  * Style/visibility shared by every entity kind. `color: null` means "use the
@@ -15,16 +15,16 @@ export type EntityId = string
  * per-object override, same as GeoGebra's object color.
  */
 export interface EntityStyle {
-  readonly color: string | null
-  readonly hidden: boolean
+  readonly color: string | null;
+  readonly hidden: boolean;
 }
 
 /** A free point: user-placed, draggable, owns its coordinates. */
 export interface FreePoint extends EntityStyle {
-  readonly id: EntityId
-  readonly kind: 'point'
-  readonly x: number
-  readonly y: number
+  readonly id: EntityId;
+  readonly kind: "point";
+  readonly x: number;
+  readonly y: number;
 }
 
 /**
@@ -44,47 +44,47 @@ export interface FreePoint extends EntityStyle {
  * before treating the point as real.
  */
 export interface IntersectionPoint extends EntityStyle {
-  readonly id: EntityId
-  readonly kind: 'intersection'
-  readonly x: number
-  readonly y: number
-  readonly a: EntityId
-  readonly b: EntityId
-  readonly branch: 0 | 1
-  readonly exists: boolean
+  readonly id: EntityId;
+  readonly kind: "intersection";
+  readonly x: number;
+  readonly y: number;
+  readonly a: EntityId;
+  readonly b: EntityId;
+  readonly branch: 0 | 1;
+  readonly exists: boolean;
 }
 
-export type PointEntity = FreePoint | IntersectionPoint
+export type PointEntity = FreePoint | IntersectionPoint;
 
 /** Straight segment between two points. */
 export interface Segment extends EntityStyle {
-  readonly id: EntityId
-  readonly kind: 'segment'
-  readonly a: EntityId
-  readonly b: EntityId
+  readonly id: EntityId;
+  readonly kind: "segment";
+  readonly a: EntityId;
+  readonly b: EntityId;
 }
 
 /** Infinite line through two points. */
 export interface Line extends EntityStyle {
-  readonly id: EntityId
-  readonly kind: 'line'
-  readonly a: EntityId
-  readonly b: EntityId
+  readonly id: EntityId;
+  readonly kind: "line";
+  readonly a: EntityId;
+  readonly b: EntityId;
 }
 
 /** Circle centered at `center`, passing through `thru`. */
 export interface Circle extends EntityStyle {
-  readonly id: EntityId
-  readonly kind: 'circle'
-  readonly center: EntityId
-  readonly thru: EntityId
+  readonly id: EntityId;
+  readonly kind: "circle";
+  readonly center: EntityId;
+  readonly thru: EntityId;
 }
 
-export type Entity = PointEntity | Segment | Line | Circle
+export type Entity = PointEntity | Segment | Line | Circle;
 
 /** The whole construction: entities by id, plus insertion order for rendering. */
 export interface Construction {
-  readonly entities: Readonly<Record<EntityId, Entity>>
-  readonly order: readonly EntityId[]
-  readonly nextId: number
+  readonly entities: Readonly<Record<EntityId, Entity>>;
+  readonly order: readonly EntityId[];
+  readonly nextId: number;
 }

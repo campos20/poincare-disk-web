@@ -24,14 +24,24 @@ const ICONS: Record<Entity["kind"], LucideIcon> = {
   circle: Circle,
 };
 
-const KIND_LABEL: Record<Exclude<Entity["kind"], "point" | "intersection">, MessageKey> = {
+const KIND_LABEL: Record<
+  Exclude<Entity["kind"], "point" | "intersection">,
+  MessageKey
+> = {
   segment: "object.segment",
   line: "object.line",
   circle: "object.circle",
 };
 
 /** Swatches offered for object color; matches the app's existing accents. */
-const PALETTE = ["#e8b45a", "#7fa7d4", "#6ee7b7", "#f4708a", "#c792ea", "#eaf1f8"] as const;
+const PALETTE = [
+  "#e8b45a",
+  "#7fa7d4",
+  "#6ee7b7",
+  "#f4708a",
+  "#c792ea",
+  "#eaf1f8",
+] as const;
 
 function objectLabel(
   entity: Entity,
@@ -74,7 +84,9 @@ export function ObjectPanel({
   return (
     <aside className={collapsed ? "object-panel collapsed" : "object-panel"}>
       <div className="object-panel-header">
-        {!collapsed && <span className="object-panel-title">{t("panel.title")}</span>}
+        {!collapsed && (
+          <span className="object-panel-title">{t("panel.title")}</span>
+        )}
         <button
           type="button"
           className="panel-toggle"
@@ -91,7 +103,9 @@ export function ObjectPanel({
       </div>
       {!collapsed && (
         <ul className="object-list">
-          {entities.length === 0 && <li className="object-empty">{t("panel.empty")}</li>}
+          {entities.length === 0 && (
+            <li className="object-empty">{t("panel.empty")}</li>
+          )}
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
             const selected = entity.id === selectedId;
@@ -122,7 +136,9 @@ export function ObjectPanel({
                     className={`object-icon object-icon-${entity.kind}`}
                     style={entity.color ? { color: entity.color } : undefined}
                   />
-                  <span className="object-label">{objectLabel(entity, names, t)}</span>
+                  <span className="object-label">
+                    {objectLabel(entity, names, t)}
+                  </span>
                 </button>
                 <div className="object-actions">
                   <button
@@ -154,7 +170,9 @@ export function ObjectPanel({
                         key={color}
                         type="button"
                         className={
-                          entity.color === color ? "color-swatch active" : "color-swatch"
+                          entity.color === color
+                            ? "color-swatch active"
+                            : "color-swatch"
                         }
                         style={{ background: color }}
                         aria-label={color}

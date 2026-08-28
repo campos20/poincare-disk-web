@@ -9,7 +9,7 @@ export type {
   Line,
   PointEntity,
   Segment,
-} from './types'
+} from "./types";
 export {
   acquirePoint,
   addCircle,
@@ -26,8 +26,8 @@ export {
   recomputeIntersections,
   setColor,
   setHidden,
-} from './construction'
-export type { AcquireResult, AddResult } from './construction'
+} from "./construction";
+export type { AcquireResult, AddResult } from "./construction";
 export {
   applyClick,
   initialToolState,
@@ -35,5 +35,5 @@ export {
   SNAP_THRESHOLD,
   TOOL_ORDER,
   TOOLS,
-} from './tools'
-export type { ClickResult, ToolDef, ToolId, ToolState } from './tools'
+} from "./tools";
+export type { ClickResult, ToolDef, ToolId, ToolState } from "./tools";

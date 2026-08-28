@@ -24,12 +24,22 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run coverage
+      - name: Generate coverage badge
+        uses: wjervis7/vitest-badge-action@v1.0.0
+        if: success() || failure()
+        with:
+          result-type: lines
+          upload-badge: false
+          badge-path: coverage-badge.svg
       - run: npm run build
       # SPA fallback: GitHub Pages has no server-side rewrite, so deep links
       # 404 without this. Serving the app shell as the 404 page lets the
       # client-side router take over.
       - run: cp dist/index.html dist/404.html
+      # Served alongside the app so the coverage badge in the README can
+      # point at a URL that always reflects the latest main build.
+      - run: cp coverage-badge.svg dist/coverage-badge.svg
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
