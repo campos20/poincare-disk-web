@@ -1,5 +1,9 @@
 # Poincaré Disk — Constructions
 
+[![Test](https://github.com/campos20/poincare-disk-web/actions/workflows/test.yml/badge.svg)](https://github.com/campos20/poincare-disk-web/actions/workflows/test.yml)
+[![Deploy](https://github.com/campos20/poincare-disk-web/actions/workflows/deploy.yml/badge.svg)](https://github.com/campos20/poincare-disk-web/actions/workflows/deploy.yml)
+[![Coverage](https://campos20.github.io/poincare-disk-web/coverage-badge.svg)](https://campos20.github.io/poincare-disk-web/coverage-badge.svg)
+
 You can try the app here: <https://campos20.github.io/poincare-disk-web/>
 
 An interactive geometry tool (GeoGebra/Desmos-inspired). Constructions are
@@ -28,6 +32,7 @@ interaction code.
 npm install
 npm run dev       # dev server (serves under /poincare-disk-web/)
 npm test          # engine + geometry unit tests (vitest)
+npm run coverage  # unit tests with a coverage report
 npm run build     # typecheck + production build
 npm run preview   # serve the production build locally
 ```
