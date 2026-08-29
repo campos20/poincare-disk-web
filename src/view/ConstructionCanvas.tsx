@@ -130,10 +130,7 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
     const candidate = clickCandidate.current;
     clickCandidate.current = null;
     if (!candidate) return;
-    const moved = Math.hypot(
-      e.clientX - candidate.x,
-      e.clientY - candidate.y,
-    );
+    const moved = Math.hypot(e.clientX - candidate.x, e.clientY - candidate.y);
     // A press that didn't move is a click: select what was under it. A
     // press that moved was a drag, which already did its own thing.
     if (moved < CLICK_MOVE_THRESHOLD) {

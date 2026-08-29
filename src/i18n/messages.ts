@@ -27,7 +27,8 @@ const en = {
   "nav.about": "About",
   "nav.config": "Settings",
   "about.title": "About",
-  "about.placeholder": "The hyperbolic geometry equations behind this construction will be documented here.",
+  "about.placeholder":
+    "The hyperbolic geometry equations behind this construction will be documented here.",
   "config.title": "Settings",
   "config.language": "Language",
   "panel.title": "Objects",
