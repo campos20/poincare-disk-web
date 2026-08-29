@@ -125,7 +125,17 @@ export function Toolbar({ active, onSelect }: Props) {
               aria-expanded={isOpen}
               aria-label={groupLabel}
               title={groupLabel}
-              onClick={() => setOpenGroup(isOpen ? null : i)}
+              onClick={() => {
+                if (!activeInGroup) {
+                  // Pre selects the last picked tool in the group if no tool is active in the group
+                  pick(i, lastPicked[i]);
+                } else {
+                  // Pre select the first tool in the group if the active tool is already in the group
+                  pick(i, group.tools[0]);
+                }
+
+                setOpenGroup(isOpen ? null : i);
+              }}
             >
               <ToolIcon id={shown} />
               <span>{t(`tool.${shown}`)}</span>
