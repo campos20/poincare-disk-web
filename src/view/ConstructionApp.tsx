@@ -4,8 +4,8 @@ import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
 import { appReducer, initialAppState } from "./appState";
 import { ConstructionCanvas } from "./ConstructionCanvas";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ObjectPanel } from "./ObjectPanel";
+import { PageMenu } from "./PageMenu";
 import { Toolbar } from "./Toolbar";
 import "./construction.css";
 
@@ -58,13 +58,13 @@ export function ConstructionApp() {
   }, [state.selectedId]);
 
   return (
-    <div className="construction-app">
+    <div className="page-shell">
       <header className="app-header">
+        <PageMenu />
         <Toolbar
           active={state.toolState.tool}
           onSelect={(tool) => dispatch({ type: "setTool", tool })}
         />
-        <LanguageSwitcher />
       </header>
       <div className="app-body">
         <ObjectPanel

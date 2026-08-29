@@ -1,10 +1,52 @@
-.construction-app {
+.app-shell {
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
   background: #0e1116;
   color: #dbe2ea;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0e1116;
+  color: #dbe2ea;
+}
+
+.page {
+  flex: 1;
+  min-height: 0;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+.page h1 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8b97a5;
+}
+
+.page-placeholder {
+  color: #8b97a5;
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+}
+
+.config-section h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b8c2cd;
 }
 
 .app-header {
@@ -115,7 +157,6 @@
 .lang-switch {
   display: flex;
   gap: 0.15rem;
-  margin-left: auto;
 }
 
 .lang-button {
