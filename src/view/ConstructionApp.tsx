@@ -24,6 +24,8 @@ function hintKey(toolState: ToolState): MessageKey {
       return step === 0 ? "hint.circle.center" : "hint.circle.thru";
     case "intersect":
       return step === 0 ? "hint.intersect.first" : "hint.intersect.second";
+    case "midpoint":
+      return step === 0 ? "hint.midpoint.first" : "hint.midpoint.second";
   }
 }
 

@@ -151,12 +151,12 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   const entities = state.construction.order.map(
     (id) => construction.entities[id],
   );
-  const strokes = entities.filter(
-    (ent) => ent.kind !== "point" && ent.kind !== "intersection",
-  );
-  const points = entities.filter(
-    (ent) => ent.kind === "point" || ent.kind === "intersection",
-  );
+  const isPointKind = (ent: (typeof entities)[number]) =>
+    ent.kind === "point" ||
+    ent.kind === "intersection" ||
+    ent.kind === "midpoint";
+  const strokes = entities.filter((ent) => !isPointKind(ent));
+  const points = entities.filter(isPointKind);
 
   const mode =
     toolState.tool === "select"

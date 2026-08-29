@@ -8,6 +8,7 @@ const en = {
   "tool.line": "Line",
   "tool.circle": "Circle",
   "tool.intersect": "Intersect",
+  "tool.midpoint": "Midpoint",
   "hint.select": "Drag a point to move it — everything built on it follows.",
   "hint.point": "Click anywhere to place a point.",
   "hint.segment.first": "Segment: click the first endpoint.",
@@ -19,6 +20,8 @@ const en = {
   "hint.intersect.first": "Intersect: click a line, segment, or circle.",
   "hint.intersect.second":
     "Intersect: click the line, segment, or circle to cross it with.",
+  "hint.midpoint.first": "Midpoint: click the first point.",
+  "hint.midpoint.second": "Midpoint: click the second point.",
   "toolbar.aria": "Construction tools",
   "canvas.aria": "Construction canvas",
   "language.aria": "Language",
@@ -56,6 +59,7 @@ const pt: Record<MessageKey, string> = {
   "tool.line": "Reta",
   "tool.circle": "Círculo",
   "tool.intersect": "Interseção",
+  "tool.midpoint": "Ponto médio",
   "hint.select":
     "Arraste um ponto para movê-lo — tudo construído sobre ele acompanha.",
   "hint.point": "Clique em qualquer lugar para criar um ponto.",
@@ -69,6 +73,8 @@ const pt: Record<MessageKey, string> = {
     "Interseção: clique em uma reta, segmento ou círculo.",
   "hint.intersect.second":
     "Interseção: clique na reta, segmento ou círculo para cruzar.",
+  "hint.midpoint.first": "Ponto médio: clique no primeiro ponto.",
+  "hint.midpoint.second": "Ponto médio: clique no segundo ponto.",
   "toolbar.aria": "Ferramentas de construção",
   "canvas.aria": "Tela de construção",
   "language.aria": "Idioma",

@@ -302,6 +302,10 @@
   color: #f4d06f;
 }
 
+.object-icon-midpoint {
+  color: #c792ea;
+}
+
 .object-icon-segment,
 .object-icon-line,
 .object-icon-circle {

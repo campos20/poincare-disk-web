@@ -145,6 +145,30 @@ describe("two-point tools", () => {
   });
 });
 
+describe("tools the engine can't finish itself (midpoint)", () => {
+  it("fills its buffer like any other 2-point tool but creates nothing", () => {
+    const first = applyClick(emptyConstruction(), tool("midpoint"), 0, 0);
+    expect(first.created).toBeNull();
+    expect(first.toolState.buffer).toHaveLength(1);
+
+    const second = applyClick(first.construction, first.toolState, 100, 0);
+    // Unlike segment/line/circle, applyClick can't build this entity
+    // itself (it needs the view layer's hyperbolic formula) — it reports
+    // the full buffer back instead of creating something on its own.
+    expect(second.created).toBeNull();
+    expect(second.toolState.buffer).toHaveLength(2);
+    expect(allPoints(second.construction)).toHaveLength(2);
+  });
+
+  it("ignores a second click on the already-buffered point", () => {
+    const first = applyClick(emptyConstruction(), tool("midpoint"), 0, 0);
+    const second = applyClick(first.construction, first.toolState, 3, 3, 12); // snaps to buffered point
+    expect(second.created).toBeNull();
+    expect(second.toolState.buffer).toHaveLength(1);
+    expect(allPoints(second.construction)).toHaveLength(1);
+  });
+});
+
 describe("tool switching", () => {
   it("starts on select with an empty buffer", () => {
     expect(initialToolState()).toEqual({ tool: "select", buffer: [] });

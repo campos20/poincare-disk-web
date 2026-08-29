@@ -34,6 +34,7 @@ export function definingPoints(entity: Entity): readonly EntityId[] {
   switch (entity.kind) {
     case "point":
     case "intersection":
+    case "midpoint":
       return [entity.id];
     case "segment":
     case "line":

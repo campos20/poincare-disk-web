@@ -17,7 +17,7 @@ import type { Construction, EntityId } from "./types";
 export const SNAP_THRESHOLD = 0.04;
 
 export type ToolId =
-  "select" | "point" | "segment" | "line" | "circle" | "intersect";
+  "select" | "point" | "segment" | "line" | "circle" | "intersect" | "midpoint";
 
 // Display names are presentation and live in the view's i18n layer;
 // the engine only knows stable ids and click counts.
@@ -32,6 +32,14 @@ export interface ToolDef {
 // appState.ts's 'entityClick' action, and view/intersections.ts for the
 // math). It's still declared here so the toolbar/tool-switching machinery
 // treats it like any other tool.
+//
+// 'midpoint' clicks a coordinate like segment/line/circle (so it does flow
+// through applyClick's buffering below), but the entity it creates is a
+// point with real coordinates computed by a hyperbolic formula — geometry
+// the engine doesn't have either. applyClick fills its buffer the same way
+// as the curve tools but stops short of creating the entity; appState.ts's
+// 'canvasClick' case finishes the job (see hyperbolicFormulas.ts's
+// `hyperbolicMidpoint`).
 export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
   select: { id: "select", pointsNeeded: 0 },
   point: { id: "point", pointsNeeded: 1 },
@@ -39,6 +47,7 @@ export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
   line: { id: "line", pointsNeeded: 2 },
   circle: { id: "circle", pointsNeeded: 2 },
   intersect: { id: "intersect", pointsNeeded: 2 },
+  midpoint: { id: "midpoint", pointsNeeded: 2 },
 };
 
 export const TOOL_ORDER: readonly ToolId[] = [
@@ -48,6 +57,7 @@ export const TOOL_ORDER: readonly ToolId[] = [
   "line",
   "circle",
   "intersect",
+  "midpoint",
 ];
 
 export interface ToolState {
@@ -116,17 +126,31 @@ export function applyClick(
     };
   }
 
-  const [a, b] = nextBuffer as [EntityId, EntityId];
-  const added =
-    tool === "segment"
-      ? addSegment(acquired.construction, a, b)
-      : tool === "line"
-        ? addLine(acquired.construction, a, b)
-        : addCircle(acquired.construction, a, b);
+  // segment/line/circle entities need no geometry to create — they only
+  // ever store point references, resolved at render time — so applyClick
+  // finishes them itself. Any other 2-point tool (currently just
+  // 'midpoint') needs geometry the engine doesn't have, so it reports the
+  // full buffer back without creating anything; the caller finishes it
+  // (see the TOOLS doc comment above).
+  if (tool === "segment" || tool === "line" || tool === "circle") {
+    const [a, b] = nextBuffer as [EntityId, EntityId];
+    const added =
+      tool === "segment"
+        ? addSegment(acquired.construction, a, b)
+        : tool === "line"
+          ? addLine(acquired.construction, a, b)
+          : addCircle(acquired.construction, a, b);
+
+    return {
+      construction: added.construction,
+      toolState: { tool, buffer: [] },
+      created: added.id,
+    };
+  }
 
   return {
-    construction: added.construction,
-    toolState: { tool, buffer: [] },
-    created: added.id,
+    construction: acquired.construction,
+    toolState: { tool, buffer: nextBuffer },
+    created: null,
   };
 }

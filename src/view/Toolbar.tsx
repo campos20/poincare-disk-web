@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   Circle,
+  Diamond,
   Dot,
   Minus,
   MousePointer2,
@@ -17,6 +18,7 @@ const ICONS: Record<ToolId, LucideIcon> = {
   select: MousePointer2,
   point: Dot,
   intersect: SquaresIntersect,
+  midpoint: Diamond,
   segment: Minus,
   line: Slash,
   circle: Circle,
@@ -32,7 +34,7 @@ interface ToolGroup {
 // than joining a group. Every drawing tool lives in a named group — even
 // 'circle' alone — so every group gets the same open-a-submenu affordance.
 const GROUPS: readonly ToolGroup[] = [
-  { label: "tool.point", tools: ["point", "intersect"] },
+  { label: "tool.point", tools: ["point", "intersect", "midpoint"] },
   { label: "tool.line", tools: ["segment", "line"] },
   { label: "tool.circle", tools: ["circle"] },
 ];

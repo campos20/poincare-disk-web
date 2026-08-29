@@ -10,6 +10,7 @@ import type {
   EntityId,
   FreePoint,
   IntersectionPoint,
+  MidpointPoint,
   PointEntity,
 } from "./types";
 
@@ -119,22 +120,56 @@ export function addIntersectionPoint(
   }));
 }
 
+/**
+ * Add a point at the hyperbolic midpoint of two other points (`a`, `b`).
+ * `x`/`y` are the computed coordinates — supplied by the caller, since the
+ * engine has no geometry of its own (see view/hyperbolicFormulas.ts's
+ * `hyperbolicMidpoint`, the counterpart to `addIntersectionPoint`'s split).
+ */
+export function addMidpoint(
+  c: Construction,
+  x: number,
+  y: number,
+  a: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "midpoint",
+    x,
+    y,
+    a,
+    b,
+    exists: true,
+    color: null,
+    hidden: false,
+  }));
+}
+
 function isPoint(e: Entity): e is PointEntity {
-  return e.kind === "point" || e.kind === "intersection";
+  return (
+    e.kind === "point" || e.kind === "intersection" || e.kind === "midpoint"
+  );
+}
+
+function isDerivedPoint(
+  e: PointEntity,
+): e is IntersectionPoint | MidpointPoint {
+  return e.kind === "intersection" || e.kind === "midpoint";
 }
 
 /**
  * Resolve a point id to its current entity, or null if absent, not a
- * point, or an intersection point whose sources currently don't meet
- * (`exists: false`) — callers that look a point up to use its coordinates
- * (rendering, geometry) should see nothing there, same as if it had never
- * been created; the raw entity itself is still reachable via
+ * point, or a derived point (intersection/midpoint) whose sources currently
+ * don't resolve (`exists: false`) — callers that look a point up to use its
+ * coordinates (rendering, geometry) should see nothing there, same as if it
+ * had never been created; the raw entity itself is still reachable via
  * `c.entities[id]` for things like the object panel that list it either way.
  */
 export function getPoint(c: Construction, id: EntityId): PointEntity | null {
   const e = c.entities[id];
   if (!e || !isPoint(e)) return null;
-  if (e.kind === "intersection" && !e.exists) return null;
+  if (isDerivedPoint(e) && !e.exists) return null;
   return e;
 }
 
@@ -211,12 +246,53 @@ export function recomputeIntersections(
 }
 
 /**
+ * Refresh every midpoint's coordinates from its two source points, in
+ * construction order — the same single-pass approach as
+ * `recomputeIntersections` (see its doc comment), which also correctly
+ * cascades a midpoint built on another midpoint or on an intersection
+ * point, since `compute` resolves sources through the progressively-updated
+ * `entities` map rather than the original snapshot.
+ *
+ * `compute` supplies the actual formula (view/hyperbolicFormulas.ts's
+ * `hyperbolicMidpoint`, wrapped to resolve point ids); it returns null when
+ * `a` or `b` doesn't currently resolve to a real point (e.g. an
+ * intersection source that's stopped existing), in which case the midpoint
+ * is marked `exists: false` rather than deleted — same freeze-in-place
+ * behavior as a vanished intersection.
+ */
+export function recomputeMidpoints(
+  c: Construction,
+  compute: (
+    construction: Construction,
+    a: EntityId,
+    b: EntityId,
+  ) => { readonly x: number; readonly y: number } | null,
+): Construction {
+  let entities = c.entities;
+  for (const id of c.order) {
+    const e = entities[id];
+    if (e.kind !== "midpoint") continue;
+    const p = compute({ ...c, entities }, e.a, e.b);
+    if (p) {
+      if (!e.exists || p.x !== e.x || p.y !== e.y) {
+        const moved: MidpointPoint = { ...e, x: p.x, y: p.y, exists: true };
+        entities = { ...entities, [id]: moved };
+      }
+    } else if (e.exists) {
+      const vanished: MidpointPoint = { ...e, exists: false };
+      entities = { ...entities, [id]: vanished };
+    }
+  }
+  return entities === c.entities ? c : { ...c, entities };
+}
+
+/**
  * Nearest existing, currently-visible point within `threshold` (svg
  * units), or null. This powers snapping: tools reuse this point instead
  * of stacking a new one on top, which is what lets entities share
- * endpoints and survive drags. An intersection point with no current
- * solution (`exists: false`) is invisible and skipped — nothing should
- * snap to, or start a drag on, a point that isn't there.
+ * endpoints and survive drags. A derived point (intersection/midpoint)
+ * with no current solution (`exists: false`) is invisible and skipped —
+ * nothing should snap to, or start a drag on, a point that isn't there.
  */
 export function findPointNear(
   c: Construction,
@@ -227,7 +303,7 @@ export function findPointNear(
   let best: EntityId | null = null;
   let bestDist = threshold;
   for (const p of allPoints(c)) {
-    if (p.kind === "intersection" && !p.exists) continue;
+    if (isDerivedPoint(p) && !p.exists) continue;
     const d = Math.hypot(p.x - x, p.y - y);
     if (d <= bestDist) {
       best = p.id;
@@ -282,6 +358,7 @@ function dependencies(e: Entity): readonly EntityId[] {
     case "point":
       return [];
     case "intersection":
+    case "midpoint":
     case "segment":
     case "line":
       return [e.a, e.b];

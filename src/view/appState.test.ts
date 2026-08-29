@@ -7,12 +7,12 @@ import {
   emptyConstruction,
   getPoint,
 } from "../engine";
-import type { EntityId } from "../engine";
+import type { EntityId, ToolId } from "../engine";
 import { appReducer, initialAppState } from "./appState";
 import type { AppState } from "./appState";
 import { isInsideDisk } from "./disk";
 
-const withTool = (tool: "point" | "select"): AppState => ({
+const withTool = (tool: ToolId): AppState => ({
   ...initialAppState(),
   toolState: { tool, buffer: [] },
 });
@@ -138,6 +138,48 @@ describe("object panel actions", () => {
     const after = appReducer(state, { type: "deleteObject", id: p1.id });
     expect(after.construction.entities[seg.id]).toBeUndefined();
     expect(after.selectedId).toBeNull();
+  });
+});
+
+describe("midpoint tool", () => {
+  it("creates the midpoint once both points are clicked, via the hyperbolic formula", () => {
+    let state = appReducer(withTool("midpoint"), {
+      type: "canvasClick",
+      x: 0,
+      y: 0,
+    });
+    expect(state.toolState.buffer).toHaveLength(1);
+
+    state = appReducer(state, { type: "canvasClick", x: 0.5, y: 0 });
+    expect(state.toolState.buffer).toHaveLength(0);
+
+    const points = allPoints(state.construction);
+    expect(points).toHaveLength(3); // A, B, and the midpoint
+    const mid = points.find((p) => p.kind === "midpoint")!;
+    // On the real axis, the Euclidean position is tanh(artanh(t)/2) for a
+    // point at parameter t; for t = 0.5 that simplifies to 2 − √3.
+    expect(mid.x).toBeCloseTo(2 - Math.sqrt(3));
+    expect(mid.y).toBeCloseTo(0);
+  });
+
+  it("recomputes on drag, including through the antipodal edge case", () => {
+    let state = appReducer(withTool("midpoint"), {
+      type: "canvasClick",
+      x: 0,
+      y: 0,
+    });
+    state = appReducer(state, { type: "canvasClick", x: 0.5, y: 0 });
+    const [a, , mid] = allPoints(state.construction);
+
+    // Drag A to (-0.5, 0): A and B are now antipodal through the origin —
+    // the general midpoint formula's removable singularity (see
+    // hyperbolicFormulas.ts) — so this also regression-tests that case.
+    state = appReducer(state, { type: "dragStart", id: a.id });
+    state = appReducer(state, { type: "dragMove", x: -0.5, y: 0 });
+
+    const after = getPoint(state.construction, mid.id)!;
+    expect(after.x).toBeCloseTo(0);
+    expect(after.y).toBeCloseTo(0);
   });
 });
 
