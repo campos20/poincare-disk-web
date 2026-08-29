@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { findPointNear, SNAP_THRESHOLD } from "../engine";
+import type { EntityId } from "../engine";
 import { useI18n } from "../i18n/context";
 import type { AppAction, AppState } from "./appState";
 import { DISK_RADIUS, toModel } from "./disk";
@@ -10,6 +11,10 @@ import { pointNames } from "./naming";
 
 /** Smallest half-extent of the viewBox: the disk plus a little breathing room. */
 const DISK_MARGIN = DISK_RADIUS + 10;
+
+/** Client-space pointer movement below which a press+release counts as a
+ * click rather than a drag. */
+const CLICK_MOVE_THRESHOLD = 4;
 
 /**
  * A viewBox centered on the origin matching the element's aspect ratio, so
@@ -44,6 +49,11 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
   const { t } = useI18n();
   const { construction, toolState, dragId, selectedId } = state;
   const [viewport, setViewport] = useState<Rect>(() => fitViewport(4, 3));
+  // Entity under the pointer at press time, and where the press started —
+  // used to tell a select-tool click (no movement) apart from a drag.
+  const clickCandidate = useRef<{ id: EntityId; x: number; y: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -82,12 +92,25 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
     const model = toModel(pt);
     if (toolState.tool === "select") {
       const id = findPointNear(construction, model.x, model.y, SNAP_THRESHOLD);
-      // Intersection points are derived, not draggable — don't start a
-      // drag that movePoint would just ignore.
-      if (id !== null && construction.entities[id]?.kind === "point") {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        dispatch({ type: "dragStart", id });
+      if (id !== null) {
+        clickCandidate.current = { id, x: e.clientX, y: e.clientY };
+        // Intersection points are derived, not draggable — don't start a
+        // drag that movePoint would just ignore.
+        if (construction.entities[id]?.kind === "point") {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          dispatch({ type: "dragStart", id });
+        }
+        return;
       }
+      // No point under the pointer — see if a stroke (segment/line/circle)
+      // was hit via its invisible `.ent-hit` overlay (see renderEntity).
+      const target = e.target as Element;
+      const entityId = target
+        .closest("[data-entity-id]")
+        ?.getAttribute("data-entity-id");
+      clickCandidate.current = entityId
+        ? { id: entityId, x: e.clientX, y: e.clientY }
+        : null;
     } else {
       dispatch({ type: "canvasClick", x: model.x, y: model.y });
     }
@@ -102,7 +125,24 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
     }
   };
 
-  const endDrag = () => {
+  const onPointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (dragId !== null) dispatch({ type: "dragEnd" });
+    const candidate = clickCandidate.current;
+    clickCandidate.current = null;
+    if (!candidate) return;
+    const moved = Math.hypot(
+      e.clientX - candidate.x,
+      e.clientY - candidate.y,
+    );
+    // A press that didn't move is a click: select what was under it. A
+    // press that moved was a drag, which already did its own thing.
+    if (moved < CLICK_MOVE_THRESHOLD) {
+      dispatch({ type: "selectObject", id: candidate.id });
+    }
+  };
+
+  const onPointerCancel = () => {
+    clickCandidate.current = null;
     if (dragId !== null) dispatch({ type: "dragEnd" });
   };
 
@@ -135,8 +175,8 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       viewBox={`${viewport.minX} ${viewport.minY} ${viewport.maxX - viewport.minX} ${viewport.maxY - viewport.minY}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       aria-label={t("canvas.aria")}
     >
       {/* The Poincaré disk: the space itself. Outside it, nothing exists. */}

@@ -1,4 +1,4 @@
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import type { ToolState } from "../engine";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
@@ -31,6 +31,31 @@ export function ConstructionApp() {
   const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const { t } = useI18n();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "Escape") {
+        dispatch({ type: "setTool", tool: "select" });
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (state.selectedId !== null) {
+          // Backspace without a focused field would otherwise navigate back.
+          e.preventDefault();
+          dispatch({ type: "deleteObject", id: state.selectedId });
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [state.selectedId]);
 
   return (
     <div className="construction-app">
