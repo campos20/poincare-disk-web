@@ -99,6 +99,66 @@ export function hyperbolicCircleThroughPoints(a: XY, b: XY): CircleShape {
   return { cx, cy, r: Math.sqrt(rSquared) };
 }
 
+/**
+ * The hyperbolic midpoint of two points on the same diameter (A, B and the
+ * origin collinear — see `orthogonalCircleThroughPoints`'s null case).
+ * Parametrizes both by their signed hyperbolic "coordinate" along that line
+ * (`atanh` of their signed Euclidean distance from the origin) and averages
+ * those, which is exactly hyperbolic distance for points on a diameter — the
+ * general formula below has a removable singularity here (see its use).
+ */
+function collinearMidpoint(a: XY, b: XY): XY {
+  const dir = distanceFromOrigin(a) >= distanceFromOrigin(b) ? a : b;
+  const d = distanceFromOrigin(dir);
+  if (d < 1e-9) return { x: 0, y: 0 }; // both (numerically) at the origin
+  const ux = dir.x / d;
+  const uy = dir.y / d;
+  const ta = a.x * ux + a.y * uy;
+  const tb = b.x * ux + b.y * uy;
+  const tMid = Math.tanh((Math.atanh(ta) + Math.atanh(tb)) / 2);
+  return { x: tMid * ux, y: tMid * uy };
+}
+
+/**
+ * The hyperbolic midpoint of A and B: the point on the geodesic through them
+ * equidistant (hyperbolically) from both, in unit-disk model coordinates.
+ *
+ * For any two points strictly inside the unit disk that aren't collinear
+ * with the origin: with `p = dA² − 1` and `q = dB² − 1` (both negative
+ * there), the quantity under the square root is
+ * `p·q·(−2(A·B) + dA²dB² + 1)`, and since `A·B ≤ dA·dB` (Cauchy–Schwarz),
+ * `−2(A·B) + dA²dB² + 1 ≥ (dA·dB − 1)² ≥ 0` — so the radicand is a product
+ * of two non-negative factors, never negative.
+ *
+ * When A, B and the origin ARE collinear, this general formula's numerator
+ * and denominator both vanish (most visibly for antipodal A, B, where it's
+ * an exact 0/0 — both are `2p²(A·B + dA²)`-shaped, and `A·B = −dA²` exactly
+ * when B = −A) — a removable singularity, not an actual sign of no
+ * midpoint, so `collinearMidpoint` computes it directly instead.
+ */
+export function hyperbolicMidpoint(a: XY, b: XY): XY {
+  const orthogonal = orthogonalCircleThroughPoints(a, b);
+  if (!orthogonal) return collinearMidpoint(a, b);
+
+  const dA2 = a.x * a.x + a.y * a.y;
+  const dB2 = b.x * b.x + b.y * b.y;
+  const dot = a.x * b.x + a.y * b.y;
+  const p = dA2 - 1;
+  const q = dB2 - 1;
+
+  const radicand = p * q * (-2 * dot + dA2 * dB2 + 1);
+  const bracket = -Math.sqrt(Math.max(0, radicand)) - dA2 * dB2 + 1;
+  const denom = 2 * p * q * dot + dA2 * q * q + p * p * dB2;
+
+  const numX = p * b.x + q * a.x;
+  const numY = p * b.y + q * a.y;
+
+  return {
+    x: -(numX * bracket) / denom,
+    y: -(numY * bracket) / denom,
+  };
+}
+
 /** An arc of the circle orthogonal to the unit circle, from p1 to p2. */
 export interface HyperbolicArc {
   readonly kind: "arc";

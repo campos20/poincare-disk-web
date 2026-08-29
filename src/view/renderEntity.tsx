@@ -46,8 +46,10 @@ function strokeStyle(
   return !buffered && entity.color ? { stroke: entity.color } : undefined;
 }
 
+const DERIVED_POINT_KINDS = new Set(["intersection", "midpoint"]);
+
 function pointClass(entity: Entity, opts: RenderOptions): string {
-  const derived = entity.kind === "intersection" ? " derived" : "";
+  const derived = DERIVED_POINT_KINDS.has(entity.kind) ? " derived" : "";
   const selected = entity.id === opts.selectedId ? " selected" : "";
   if (entity.id === opts.dragId)
     return `ent-point dragging${derived}${selected}`;
@@ -77,12 +79,13 @@ export function renderEntity(
 ): ReactNode {
   switch (entity.kind) {
     case "point":
-    case "intersection": {
+    case "intersection":
+    case "midpoint": {
       if (entity.hidden) return null;
-      // A vanished intersection (its two sources currently don't meet)
-      // has no real position — its x/y are just frozen at the last one —
-      // so it must not be drawn.
-      if (entity.kind === "intersection" && !entity.exists) return null;
+      // A vanished intersection/midpoint (its sources currently don't
+      // resolve) has no real position — its x/y are just frozen at the
+      // last one — so it must not be drawn.
+      if (entity.kind !== "point" && !entity.exists) return null;
       const p = toScreen(entity);
       const name = opts.names.get(entity.id);
       // A custom color is skipped while the point is being actively

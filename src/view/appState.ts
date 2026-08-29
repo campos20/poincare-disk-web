@@ -5,23 +5,28 @@
 
 import {
   addIntersectionPoint,
+  addMidpoint,
   applyClick,
   deleteEntity,
   emptyConstruction,
+  getPoint,
   initialToolState,
   movePoint,
   recomputeIntersections,
+  recomputeMidpoints,
   selectTool,
   setColor,
   setHidden,
 } from "../engine";
 import type { Construction, EntityId, ToolId, ToolState } from "../engine";
 import { isInsideDisk } from "./disk";
+import { hyperbolicMidpoint } from "./hyperbolicFormulas";
 import {
   computeIntersectionPoint,
   intersectEntities,
   isIntersectable,
 } from "./intersections";
+import type { XY } from "./shapes";
 
 export interface AppState {
   readonly construction: Construction;
@@ -58,6 +63,42 @@ function isGone(construction: Construction, id: EntityId | null): boolean {
   return id !== null && !(id in construction.entities);
 }
 
+/**
+ * `recomputeMidpoints`'s compute callback: resolve two point ids to their
+ * current positions and apply the hyperbolic midpoint formula, or null if
+ * either doesn't currently resolve to a real point (e.g. an intersection
+ * source that's stopped existing).
+ */
+function computeMidpoint(
+  construction: Construction,
+  aId: EntityId,
+  bId: EntityId,
+): XY | null {
+  const a = getPoint(construction, aId);
+  const b = getPoint(construction, bId);
+  return a && b ? hyperbolicMidpoint(a, b) : null;
+}
+
+/**
+ * applyClick fills the midpoint tool's buffer the same way as the curve
+ * tools but can't finish it itself (see the TOOLS doc comment in
+ * engine/tools.ts) — this creates the actual point once both are picked.
+ */
+function completeMidpoint(
+  construction: Construction,
+  toolState: ToolState,
+): { construction: Construction; toolState: ToolState } {
+  const [aId, bId] = toolState.buffer as [EntityId, EntityId];
+  const a = getPoint(construction, aId);
+  const b = getPoint(construction, bId);
+  const nextToolState = { ...toolState, buffer: [] };
+  if (!a || !b) return { construction, toolState: nextToolState };
+
+  const mid = hyperbolicMidpoint(a, b);
+  const added = addMidpoint(construction, mid.x, mid.y, aId, bId);
+  return { construction: added.construction, toolState: nextToolState };
+}
+
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case "setTool":
@@ -78,6 +119,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         action.x,
         action.y,
       );
+      // The midpoint tool's buffer fills through applyClick like any other
+      // 2-point tool, but the entity itself needs the view layer's
+      // hyperbolic formula — finish it here once both points are picked.
+      if (
+        state.toolState.tool === "midpoint" &&
+        result.toolState.buffer.length === 2
+      ) {
+        const done = completeMidpoint(result.construction, result.toolState);
+        return {
+          ...state,
+          construction: done.construction,
+          toolState: done.toolState,
+        };
+      }
       return {
         ...state,
         construction: result.construction,
@@ -98,10 +153,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         action.y,
       );
       // Any intersection point built on this one (directly or through a
-      // chain of curves/other intersections) needs its position refreshed.
+      // chain of curves/other intersections) needs its position refreshed,
+      // and likewise any midpoint built on this point or on one of those
+      // intersections — recomputed in that order so a midpoint sees
+      // already-fresh intersection sources. (A curve built through a
+      // midpoint, then crossed to form an intersection, is the one chain
+      // that can lag a single dragMove tick behind before self-correcting
+      // on the next one — deep enough chaining that it's not worth a
+      // combined single-pass recompute.)
+      const withIntersections = recomputeIntersections(
+        moved,
+        computeIntersectionPoint,
+      );
       return {
         ...state,
-        construction: recomputeIntersections(moved, computeIntersectionPoint),
+        construction: recomputeMidpoints(withIntersections, computeMidpoint),
       };
     }
     case "dragEnd":

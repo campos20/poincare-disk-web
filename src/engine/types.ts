@@ -54,7 +54,30 @@ export interface IntersectionPoint extends EntityStyle {
   readonly exists: boolean;
 }
 
-export type PointEntity = FreePoint | IntersectionPoint;
+/**
+ * The hyperbolic midpoint of two other points (`a`, `b`), each of which can
+ * itself be any point kind — free, intersection, or another midpoint.
+ * Coordinates are derived, not user-set, same as `IntersectionPoint`:
+ * `recomputeMidpoints` (construction.ts) refreshes them whenever `a` or `b`
+ * moves, given the actual hyperbolic formula from the view layer. Not
+ * draggable: `movePoint` only moves entities of kind `'point'`.
+ *
+ * `exists` mirrors `IntersectionPoint.exists`: it goes false (freezing x/y
+ * at their last position) when `a` or `b` is itself a currently-nonexistent
+ * derived point, rather than when the midpoint formula itself fails — the
+ * formula is defined for any two distinct points strictly inside the disk.
+ */
+export interface MidpointPoint extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "midpoint";
+  readonly x: number;
+  readonly y: number;
+  readonly a: EntityId;
+  readonly b: EntityId;
+  readonly exists: boolean;
+}
+
+export type PointEntity = FreePoint | IntersectionPoint | MidpointPoint;
 
 /** Straight segment between two points. */
 export interface Segment extends EntityStyle {

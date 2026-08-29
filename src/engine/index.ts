@@ -7,6 +7,7 @@ export type {
   FreePoint,
   IntersectionPoint,
   Line,
+  MidpointPoint,
   PointEntity,
   Segment,
 } from "./types";
@@ -16,6 +17,7 @@ export {
   addFreePoint,
   addIntersectionPoint,
   addLine,
+  addMidpoint,
   addSegment,
   allPoints,
   deleteEntity,
@@ -24,6 +26,7 @@ export {
   getPoint,
   movePoint,
   recomputeIntersections,
+  recomputeMidpoints,
   setColor,
   setHidden,
 } from "./construction";

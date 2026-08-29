@@ -3,9 +3,19 @@ import {
   distanceFromOrigin,
   hyperbolicCircleThroughPoints,
   hyperbolicLineThroughPoints,
+  hyperbolicMidpoint,
   hyperbolicSegmentThroughPoints,
   orthogonalCircleThroughPoints,
 } from "./hyperbolicFormulas";
+import type { XY } from "./shapes";
+
+/** Poincaré disk hyperbolic distance — an independent check of `hyperbolicMidpoint`. */
+function hyperbolicDistance(u: XY, v: XY): number {
+  const diff2 = (u.x - v.x) ** 2 + (u.y - v.y) ** 2;
+  const dU2 = u.x * u.x + u.y * u.y;
+  const dV2 = v.x * v.x + v.y * v.y;
+  return Math.acosh(1 + (2 * diff2) / ((1 - dU2) * (1 - dV2)));
+}
 
 describe("distanceFromOrigin", () => {
   it("computes the Euclidean distance to the origin", () => {
@@ -195,6 +205,66 @@ describe("hyperbolicSegmentThroughPoints", () => {
     expect(
       hyperbolicSegmentThroughPoints({ x: 0.2, y: 0.3 }, { x: 0.2, y: 0.3 }),
     ).toBeNull();
+  });
+});
+
+describe("hyperbolicMidpoint", () => {
+  it("computes a hand-checked example: midpoint of the origin and (0.5, 0)", () => {
+    // On the real axis, the Euclidean position is tanh(artanh(t)/2) for a
+    // point at parameter t; for t = 0.5 that simplifies to 2 − √3.
+    const mid = hyperbolicMidpoint({ x: 0, y: 0 }, { x: 0.5, y: 0 });
+    expect(mid.x).toBeCloseTo(2 - Math.sqrt(3));
+    expect(mid.y).toBeCloseTo(0);
+  });
+
+  it("is equidistant (hyperbolically) from A and B", () => {
+    const a = { x: 0.4, y: 0.3 };
+    const b = { x: -0.3, y: -0.4 };
+    const mid = hyperbolicMidpoint(a, b);
+    expect(hyperbolicDistance(a, mid)).toBeCloseTo(hyperbolicDistance(mid, b));
+  });
+
+  it("lies on the geodesic through A and B", () => {
+    const a = { x: 0.4, y: 0.3 };
+    const b = { x: -0.3, y: -0.4 };
+    const mid = hyperbolicMidpoint(a, b);
+    const circle = orthogonalCircleThroughPoints(a, b)!;
+    expect(Math.hypot(mid.x - circle.cx, mid.y - circle.cy)).toBeCloseTo(
+      circle.r,
+    );
+  });
+
+  it("doesn't depend on the order A, B are given in", () => {
+    const a = { x: 0.4, y: 0.3 };
+    const b = { x: -0.3, y: -0.4 };
+    const mid1 = hyperbolicMidpoint(a, b);
+    const mid2 = hyperbolicMidpoint(b, a);
+    expect(mid2.x).toBeCloseTo(mid1.x);
+    expect(mid2.y).toBeCloseTo(mid1.y);
+  });
+
+  it("is the origin for two points antipodal through it — the general formula's removable singularity", () => {
+    // A, B and the origin collinear with B = −A makes the general formula's
+    // numerator and denominator both vanish exactly (0/0); the geometric
+    // answer is still well-defined (the origin, by symmetry).
+    const mid = hyperbolicMidpoint({ x: -0.6, y: 0.2 }, { x: 0.6, y: -0.2 });
+    expect(mid.x).toBeCloseTo(0);
+    expect(mid.y).toBeCloseTo(0);
+  });
+
+  it("is equidistant from A and B on a diameter that isn't antipodal", () => {
+    const a = { x: 0.2, y: 0 };
+    const b = { x: 0.6, y: 0 };
+    const mid = hyperbolicMidpoint(a, b);
+    expect(mid.y).toBeCloseTo(0);
+    expect(hyperbolicDistance(a, mid)).toBeCloseTo(hyperbolicDistance(mid, b));
+  });
+
+  it("gives A back as the midpoint of A and A", () => {
+    const a = { x: 0.3, y: -0.2 };
+    const mid = hyperbolicMidpoint(a, a);
+    expect(mid.x).toBeCloseTo(a.x);
+    expect(mid.y).toBeCloseTo(a.y);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   addFreePoint,
   addIntersectionPoint,
   addLine,
+  addMidpoint,
   addSegment,
   allPoints,
   deleteEntity,
@@ -12,6 +13,7 @@ import {
   getPoint,
   movePoint,
   recomputeIntersections,
+  recomputeMidpoints,
   setColor,
   setHidden,
 } from "./construction";
@@ -248,6 +250,17 @@ describe("deleteEntity", () => {
     expect(after.entities[lineB.id]).toBeDefined();
   });
 
+  it("cascades through a midpoint: deleting one of its two source points removes it too", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const after = deleteEntity(mid.construction, p1.id);
+    expect(after.entities[mid.id]).toBeUndefined();
+    // The other source point is untouched.
+    expect(getPoint(after, p2.id)).not.toBeNull();
+  });
+
   it("cascades transitively: point -> line -> intersection -> segment built on the intersection", () => {
     const p1 = addFreePoint(emptyConstruction(), 0, 0);
     const p2 = addFreePoint(p1.construction, 10, 0);
@@ -432,6 +445,100 @@ describe("recomputeIntersections", () => {
         return { x: firstPoint.x * 2, y: firstPoint.y * 2 };
       },
     );
+
+    expect(getPoint(after, first.id)).toMatchObject({ x: 10, y: 20 });
+    expect(getPoint(after, second.id)).toMatchObject({ x: 20, y: 40 });
+  });
+});
+
+describe("addMidpoint", () => {
+  it("adds a point that resolves like any other point", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    expect(getPoint(mid.construction, mid.id)).toMatchObject({
+      x: 5,
+      y: 0,
+      kind: "midpoint",
+    });
+    expect(allPoints(mid.construction)).toHaveLength(3);
+  });
+
+  it("is not moved by movePoint", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const after = movePoint(mid.construction, mid.id, 99, 99);
+    expect(after).toBe(mid.construction);
+  });
+});
+
+describe("recomputeMidpoints", () => {
+  it("refreshes coordinates using the supplied compute function", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const after = recomputeMidpoints(mid.construction, () => ({
+      x: 42,
+      y: -7,
+    }));
+    expect(getPoint(after, mid.id)).toMatchObject({ x: 42, y: -7 });
+  });
+
+  it("marks the point as not existing (coordinates frozen) when compute reports no source", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const after = recomputeMidpoints(mid.construction, () => null);
+    expect(after.entities[mid.id]).toMatchObject({
+      exists: false,
+      x: 5,
+      y: 0,
+    });
+    expect(getPoint(after, mid.id)).toBeNull();
+  });
+
+  it("is a no-op once already marked nonexistent", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const gone = recomputeMidpoints(mid.construction, () => null);
+    const again = recomputeMidpoints(gone, () => null);
+    expect(again).toBe(gone);
+  });
+
+  it("comes back into existence, at the newly solved position, once compute finds a source again", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const mid = addMidpoint(p2.construction, 5, 0, p1.id, p2.id);
+
+    const gone = recomputeMidpoints(mid.construction, () => null);
+    const back = recomputeMidpoints(gone, () => ({ x: 7, y: 1 }));
+    expect(getPoint(back, mid.id)).toMatchObject({
+      x: 7,
+      y: 1,
+      exists: true,
+    });
+  });
+
+  it("processes in construction order so a midpoint built on another midpoint sees its refreshed position", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const first = addMidpoint(p2.construction, 1, 1, p1.id, p2.id);
+    const second = addMidpoint(first.construction, 2, 2, first.id, p2.id);
+
+    const after = recomputeMidpoints(second.construction, (construction, a) => {
+      // Second point's "position" is defined as double whatever `a` (the
+      // first midpoint) currently resolves to, to prove ordering.
+      if (a === p1.id) return { x: 10, y: 20 };
+      const source = getPoint(construction, a)!;
+      return { x: source.x * 2, y: source.y * 2 };
+    });
 
     expect(getPoint(after, first.id)).toMatchObject({ x: 10, y: 20 });
     expect(getPoint(after, second.id)).toMatchObject({ x: 20, y: 40 });

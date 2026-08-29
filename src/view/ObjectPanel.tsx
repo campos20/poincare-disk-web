@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
+  Diamond,
   Dot,
   Eye,
   EyeOff,
@@ -19,13 +20,14 @@ import { definingPoints, pointNames } from "./naming";
 const ICONS: Record<Entity["kind"], LucideIcon> = {
   point: Dot,
   intersection: Asterisk,
+  midpoint: Diamond,
   segment: Minus,
   line: Slash,
   circle: Circle,
 };
 
 const KIND_LABEL: Record<
-  Exclude<Entity["kind"], "point" | "intersection">,
+  Exclude<Entity["kind"], "point" | "intersection" | "midpoint">,
   MessageKey
 > = {
   segment: "object.segment",
@@ -51,7 +53,9 @@ function objectLabel(
   const points = definingPoints(entity)
     .map((id) => names.get(id) ?? "?")
     .join("");
-  return entity.kind === "point" || entity.kind === "intersection"
+  return entity.kind === "point" ||
+    entity.kind === "intersection" ||
+    entity.kind === "midpoint"
     ? points
     : `${t(KIND_LABEL[entity.kind])} ${points}`;
 }
@@ -109,7 +113,9 @@ export function ObjectPanel({
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
             const selected = entity.id === selectedId;
-            const vanished = entity.kind === "intersection" && !entity.exists;
+            const vanished =
+              (entity.kind === "intersection" || entity.kind === "midpoint") &&
+              !entity.exists;
             const itemClass = [
               "object-item",
               selected && "selected",

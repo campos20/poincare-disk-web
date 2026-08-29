@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   Circle,
+  Diamond,
   Dot,
   Minus,
   MousePointer2,
@@ -17,6 +18,7 @@ const ICONS: Record<ToolId, LucideIcon> = {
   select: MousePointer2,
   point: Dot,
   intersect: SquaresIntersect,
+  midpoint: Diamond,
   segment: Minus,
   line: Slash,
   circle: Circle,
@@ -32,7 +34,7 @@ interface ToolGroup {
 // than joining a group. Every drawing tool lives in a named group — even
 // 'circle' alone — so every group gets the same open-a-submenu affordance.
 const GROUPS: readonly ToolGroup[] = [
-  { label: "tool.point", tools: ["point", "intersect"] },
+  { label: "tool.point", tools: ["point", "intersect", "midpoint"] },
   { label: "tool.line", tools: ["segment", "line"] },
   { label: "tool.circle", tools: ["circle"] },
 ];
@@ -125,7 +127,21 @@ export function Toolbar({ active, onSelect }: Props) {
               aria-expanded={isOpen}
               aria-label={groupLabel}
               title={groupLabel}
-              onClick={() => setOpenGroup(isOpen ? null : i)}
+              onClick={() => {
+                if (!activeInGroup) {
+                  // No tool from this group is active yet: clicking the
+                  // group button both opens it and pre-selects the last
+                  // tool picked from it.
+                  pick(i, lastPicked[i]);
+                } else {
+                  // A tool from this group is already active — just
+                  // toggle the dropdown. Switching tools here (even to
+                  // itself) would clear any in-progress buffer, e.g.
+                  // losing a midpoint's first-clicked point just from
+                  // opening the menu to see the other options.
+                  setOpenGroup(isOpen ? null : i);
+                }
+              }}
             >
               <ToolIcon id={shown} />
               <span>{t(`tool.${shown}`)}</span>
