@@ -129,14 +129,18 @@ export function Toolbar({ active, onSelect }: Props) {
               title={groupLabel}
               onClick={() => {
                 if (!activeInGroup) {
-                  // Pre selects the last picked tool in the group if no tool is active in the group
+                  // No tool from this group is active yet: clicking the
+                  // group button both opens it and pre-selects the last
+                  // tool picked from it.
                   pick(i, lastPicked[i]);
                 } else {
-                  // Pre select the first tool in the group if the active tool is already in the group
-                  pick(i, group.tools[0]);
+                  // A tool from this group is already active — just
+                  // toggle the dropdown. Switching tools here (even to
+                  // itself) would clear any in-progress buffer, e.g.
+                  // losing a midpoint's first-clicked point just from
+                  // opening the menu to see the other options.
+                  setOpenGroup(isOpen ? null : i);
                 }
-
-                setOpenGroup(isOpen ? null : i);
               }}
             >
               <ToolIcon id={shown} />

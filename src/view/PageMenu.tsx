@@ -76,7 +76,7 @@ export function PageMenu() {
                 to={page.to}
                 role="menuitem"
                 className={active ? "tool-menu-item active" : "tool-menu-item"}
-                aria-pressed={active}
+                aria-current={active ? "page" : undefined}
                 onClick={() => setOpen(false)}
               >
                 <Icon size={16} aria-hidden />

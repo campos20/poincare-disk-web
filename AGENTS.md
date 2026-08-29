@@ -40,15 +40,16 @@ before it:
 
 ### Entity model (`engine/types.ts`)
 
-Only points (`FreePoint`, `IntersectionPoint`) carry coordinates. Every other
-entity (`Segment`, `Line`, `Circle`) references point ids, never copies
-coordinates — so dragging a point updates every dependent at render time for
-free, and `deleteEntity` cascades by walking those id references transitively
-(repeated sweeps until a pass finds nothing new — see its doc comment).
-`IntersectionPoint` coordinates are derived, not user-set: `exists: false`
-means its two source curves currently don't cross, and its x/y are left at
-their last position rather than guessed — `exists`, not the coordinates, is
-what callers must check.
+Only points (`FreePoint`, `IntersectionPoint`, `MidpointPoint`) carry
+coordinates. Every other entity (`Segment`, `Line`, `Circle`) references
+point ids, never copies coordinates — so dragging a point updates every
+dependent at render time for free, and `deleteEntity` cascades by walking
+those id references transitively (repeated sweeps until a pass finds nothing
+new — see its doc comment). `IntersectionPoint`/`MidpointPoint` coordinates
+are derived, not user-set: `exists: false` means their source(s) — two
+curves for an intersection, two points for a midpoint — currently don't
+resolve, and x/y are left at their last position rather than guessed —
+`exists`, not the coordinates, is what callers must check.
 
 ### Tool state machine (`engine/tools.ts`)
 
@@ -63,11 +64,17 @@ doesn't have.
 
 ### The engine/view split for geometry
 
-The engine never computes geometry. Two callback seams inject it from the
-view layer at the two points the engine needs it:
+The engine never computes geometry. Callback seams inject it from the view
+layer at each point the engine needs it:
 
 - `recomputeIntersections(construction, compute)` — `compute` is
   `view/intersections.ts`'s `computeIntersectionPoint`.
+- `recomputeMidpoints(construction, compute)` — `compute` is `appState.ts`'s
+  own `computeMidpoint`, which resolves the two point ids and calls
+  `view/hyperbolicFormulas.ts`'s `hyperbolicMidpoint`. Creating a midpoint
+  entity needs the same formula, so the `midpoint` tool can't finish itself
+  in `applyClick` either — see the `TOOLS` doc comment in `engine/tools.ts`
+  and `appState.ts`'s `completeMidpoint`.
 - the `intersect` tool's entity-vs-entity math — `view/intersections.ts`'s
   `intersectEntities`, called from `appState.ts`.
 
