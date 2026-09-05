@@ -37,8 +37,13 @@ export function isIntersectable(e: Entity): e is IntersectableEntity {
   return e.kind === "segment" || e.kind === "line" || e.kind === "circle";
 }
 
-/** The full Euclidean curve a hyperbolic line/segment/circle lies on. */
-type Curve =
+/**
+ * The full Euclidean curve a hyperbolic line/segment/circle lies on.
+ * Exported for view/angles.ts, which needs a curve's tangent direction at
+ * an arbitrary point on it (its own math, independent of intersection
+ * solving) to measure the angle between two curves.
+ */
+export type Curve =
   | {
       readonly kind: "circle";
       readonly cx: number;
@@ -75,7 +80,7 @@ function curveOfCircle(
   return { kind: "circle", ...hyperbolicCircleThroughPoints(center, thru) };
 }
 
-function curveOf(
+export function curveOf(
   construction: Construction,
   entity: IntersectableEntity,
 ): Curve | null {

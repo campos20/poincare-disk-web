@@ -1,4 +1,5 @@
 import {
+  Angle as AngleIcon,
   Asterisk,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +25,7 @@ const ICONS: Record<Entity["kind"], LucideIcon> = {
   segment: Minus,
   line: Slash,
   circle: Circle,
+  angle: AngleIcon,
 };
 
 const KIND_LABEL: Record<
@@ -33,6 +35,7 @@ const KIND_LABEL: Record<
   segment: "object.segment",
   line: "object.line",
   circle: "object.circle",
+  angle: "object.angle",
 };
 
 /** Swatches offered for object color; matches the app's existing accents. */
@@ -53,11 +56,17 @@ function objectLabel(
   const points = definingPoints(entity)
     .map((id) => names.get(id) ?? "?")
     .join("");
-  return entity.kind === "point" ||
+  if (
+    entity.kind === "point" ||
     entity.kind === "intersection" ||
     entity.kind === "midpoint"
-    ? points
-    : `${t(KIND_LABEL[entity.kind])} ${points}`;
+  ) {
+    return points;
+  }
+  const kindLabel = t(KIND_LABEL[entity.kind]);
+  // A curves-mode angle has no defining points (see naming.ts) — fall back
+  // to the bare kind label rather than "Angle " with a trailing space.
+  return points ? `${kindLabel} ${points}` : kindLabel;
 }
 
 interface Props {
@@ -65,6 +74,19 @@ interface Props {
   readonly collapsed: boolean;
   readonly selectedId: EntityId | null;
   readonly onToggle: () => void;
+  /**
+   * Plain click/tap on a row: feeds the active tool, same as clicking the
+   * object on the canvas would (a point for a point-needing tool, a curve
+   * for the intersect tool) — this is what lets a construction be built
+   * entirely from the panel on a screen too small to tap precisely.
+   */
+  readonly onPick: (id: EntityId) => void;
+  /**
+   * Right-click or long-press (both fire the browser's native
+   * 'contextmenu' event): select the object for property editing — color,
+   * visibility, delete. Kept off the plain click so it can't collide with
+   * onPick above.
+   */
   readonly onSelect: (id: EntityId) => void;
   readonly onSetColor: (id: EntityId, color: string | null) => void;
   readonly onToggleHidden: (id: EntityId) => void;
@@ -76,6 +98,7 @@ export function ObjectPanel({
   collapsed,
   selectedId,
   onToggle,
+  onPick,
   onSelect,
   onSetColor,
   onToggleHidden,
@@ -134,7 +157,13 @@ export function ObjectPanel({
                   type="button"
                   className="object-row"
                   aria-pressed={selected}
-                  onClick={() => onSelect(entity.id)}
+                  onClick={() => onPick(entity.id)}
+                  onContextMenu={(e) => {
+                    // Right-click on desktop, long-press on mobile — both
+                    // fire this event natively, so no manual timer needed.
+                    e.preventDefault();
+                    onSelect(entity.id);
+                  }}
                 >
                   <Icon
                     size={14}

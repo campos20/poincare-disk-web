@@ -25,6 +25,7 @@ export interface FreePoint extends EntityStyle {
   readonly kind: "point";
   readonly x: number;
   readonly y: number;
+  readonly nameIndex: number;
 }
 
 /**
@@ -52,6 +53,7 @@ export interface IntersectionPoint extends EntityStyle {
   readonly b: EntityId;
   readonly branch: 0 | 1;
   readonly exists: boolean;
+  readonly nameIndex: number;
 }
 
 /**
@@ -75,8 +77,16 @@ export interface MidpointPoint extends EntityStyle {
   readonly a: EntityId;
   readonly b: EntityId;
   readonly exists: boolean;
+  readonly nameIndex: number;
 }
 
+/**
+ * Every point kind carries `nameIndex`: its rank among points *ever
+ * created* (0, 1, 2, …), assigned once at creation and never
+ * recalculated. Display names (view/naming.ts's `pointName`) are derived
+ * from it rather than from a point's current position among survivors, so
+ * deleting an earlier point doesn't rename the ones after it.
+ */
 export type PointEntity = FreePoint | IntersectionPoint | MidpointPoint;
 
 /** Straight segment between two points. */
@@ -103,11 +113,47 @@ export interface Circle extends EntityStyle {
   readonly thru: EntityId;
 }
 
-export type Entity = PointEntity | Segment | Line | Circle;
+/**
+ * A measured angle at the vertex, between the rays toward `a` and `b`
+ * (each any point kind). The Poincaré disk is conformal, so the hyperbolic
+ * angle equals the Euclidean angle between the two geodesics' tangent
+ * directions at the vertex — computed fresh at render time from the three
+ * points' current positions (view/angles.ts), the same "no stored
+ * geometry" approach as Segment/Line/Circle above.
+ */
+export interface PointsAngle extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "angle";
+  readonly mode: "points";
+  readonly a: EntityId;
+  readonly vertex: EntityId;
+  readonly b: EntityId;
+}
+
+/**
+ * A measured angle between two curves (segment/line/circle), at one of
+ * their intersection points — also computed fresh at render time
+ * (view/angles.ts), including finding the intersection itself. Unlike the
+ * `intersect` tool, this never materializes the crossing as its own point
+ * entity: it's a measurement overlay, not a construction step.
+ */
+export interface CurvesAngle extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "angle";
+  readonly mode: "curves";
+  readonly a: EntityId;
+  readonly b: EntityId;
+}
+
+export type Angle = PointsAngle | CurvesAngle;
+
+export type Entity = PointEntity | Segment | Line | Circle | Angle;
 
 /** The whole construction: entities by id, plus insertion order for rendering. */
 export interface Construction {
   readonly entities: Readonly<Record<EntityId, Entity>>;
   readonly order: readonly EntityId[];
   readonly nextId: number;
+  /** Next `nameIndex` to hand out to a newly-created point (see `PointEntity`). */
+  readonly nextPointIndex: number;
 }

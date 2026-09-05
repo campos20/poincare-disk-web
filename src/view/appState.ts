@@ -4,8 +4,10 @@
  */
 
 import {
+  addCurvesAngle,
   addIntersectionPoint,
   addMidpoint,
+  addPointsAngle,
   applyClick,
   deleteEntity,
   emptyConstruction,
@@ -18,7 +20,13 @@ import {
   setColor,
   setHidden,
 } from "../engine";
-import type { Construction, EntityId, ToolId, ToolState } from "../engine";
+import type {
+  Construction,
+  Entity,
+  EntityId,
+  ToolId,
+  ToolState,
+} from "../engine";
 import { isInsideDisk } from "./disk";
 import { hyperbolicMidpoint } from "./hyperbolicFormulas";
 import {
@@ -47,7 +55,8 @@ export type AppAction =
   | { type: "setColor"; id: EntityId; color: string | null }
   | { type: "toggleHidden"; id: EntityId }
   | { type: "deleteObject"; id: EntityId }
-  | { type: "entityClick"; id: EntityId };
+  | { type: "entityClick"; id: EntityId }
+  | { type: "entityPick"; id: EntityId };
 
 export function initialAppState(): AppState {
   return {
@@ -99,6 +108,173 @@ function completeMidpoint(
   return { construction: added.construction, toolState: nextToolState };
 }
 
+/** Whether `entity` is a segment/line/circle — the curve kinds pickable by
+ * the intersect tool and the angle tool's curves-mode. */
+export function isCurveKind(entity: Entity | undefined): boolean {
+  return (
+    !!entity &&
+    (entity.kind === "segment" ||
+      entity.kind === "line" ||
+      entity.kind === "circle")
+  );
+}
+
+/** Whether the angle tool's buffer has already committed to curves-mode
+ * (its first pick was a curve). Points-mode has no equivalent check: a
+ * curve click when already committed to points-mode is instead rejected
+ * by `isCurveKind`'s counterpart inside `applyAngleCurvePick`. */
+function angleBufferHasCurve(state: AppState): boolean {
+  const { buffer } = state.toolState;
+  return (
+    buffer.length > 0 && isCurveKind(state.construction.entities[buffer[0]])
+  );
+}
+
+/**
+ * Advance the active (non-intersect) tool's buffer with one point at
+ * (x, y) — the coordinate a canvas click resolved to, or an existing
+ * point's own coordinates when the click came from the object panel
+ * instead (see 'entityPick' below, which snaps back onto that point via
+ * the same acquirePoint threshold applyClick already uses).
+ */
+function applyToolClick(state: AppState, x: number, y: number): AppState {
+  // The angle tool's buffer commits to a mode (points or curves) on its
+  // first pick. A point click while already curves-committed can't just
+  // extend that buffer — it'd mix a point id into a curve-id buffer — so
+  // it restarts fresh in points-mode instead, the same forgiving
+  // "switch what you meant" behavior as `applyAngleCurvePick`'s own
+  // mismatch case.
+  const startState =
+    state.toolState.tool === "angle" && angleBufferHasCurve(state)
+      ? { ...state, toolState: { ...state.toolState, buffer: [] } }
+      : state;
+
+  const result = applyClick(
+    startState.construction,
+    startState.toolState,
+    x,
+    y,
+  );
+  // The midpoint tool's buffer fills through applyClick like any other
+  // 2-point tool, but the entity itself needs the view layer's
+  // hyperbolic formula — finish it here once both points are picked.
+  if (
+    startState.toolState.tool === "midpoint" &&
+    result.toolState.buffer.length === 2
+  ) {
+    const done = completeMidpoint(result.construction, result.toolState);
+    return {
+      ...startState,
+      construction: done.construction,
+      toolState: done.toolState,
+    };
+  }
+  // The angle tool's points-mode (a, vertex, b) also fills through
+  // applyClick like any other buffered tool, but the entity itself needs
+  // no geometry at all — see engine/tools.ts's TOOLS doc comment — so it's
+  // just created directly here once all three are picked.
+  if (
+    startState.toolState.tool === "angle" &&
+    result.toolState.buffer.length === 3
+  ) {
+    const [a, vertex, b] = result.toolState.buffer as [
+      EntityId,
+      EntityId,
+      EntityId,
+    ];
+    const added = addPointsAngle(result.construction, a, vertex, b);
+    return {
+      ...startState,
+      construction: added.construction,
+      toolState: { ...result.toolState, buffer: [] },
+    };
+  }
+  return {
+    ...startState,
+    construction: result.construction,
+    toolState: result.toolState,
+  };
+}
+
+/** Toggle whether `id` is the object selected for property editing. */
+function toggleSelected(state: AppState, id: EntityId): AppState {
+  return { ...state, selectedId: state.selectedId === id ? null : id };
+}
+
+/**
+ * The intersect tool's two-entity buffer, keyed off whatever curve was
+ * picked — via the canvas's 'entityClick' or the object panel's
+ * 'entityPick'. Ignores anything that isn't a segment/line/circle.
+ */
+function applyEntityIntersectPick(state: AppState, id: EntityId): AppState {
+  const clicked = state.construction.entities[id];
+  if (!clicked || !isIntersectable(clicked)) return state;
+
+  const { buffer } = state.toolState;
+  if (buffer.length === 0 || buffer[0] === id) {
+    // First pick, or re-picking the same entity: (re)start the buffer
+    // rather than intersecting it with itself.
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+
+  const first = state.construction.entities[buffer[0]];
+  if (!first || !isIntersectable(first)) {
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+
+  // Second pick: add every intersection point between the two curves
+  // (up to two, e.g. where two circles cross twice) in one go.
+  const solutions = intersectEntities(state.construction, first, clicked);
+  let construction = state.construction;
+  solutions.forEach((p, index) => {
+    construction = addIntersectionPoint(
+      construction,
+      p.x,
+      p.y,
+      buffer[0],
+      id,
+      index as 0 | 1,
+    ).construction;
+  });
+  return {
+    ...state,
+    construction,
+    toolState: { ...state.toolState, buffer: [] },
+  };
+}
+
+/**
+ * The angle tool's curves-mode two-entity buffer, keyed off whatever curve
+ * was picked — via the canvas's 'entityClick' or the object panel's
+ * 'entityPick'. Ignores anything that isn't a segment/line/circle. Unlike
+ * `applyEntityIntersectPick`, the second pick doesn't need to solve for the
+ * curves' intersection — the `CurvesAngle` entity just stores both curve
+ * ids, and the vertex/rays/angle are all resolved fresh at render time
+ * (view/angles.ts), the same "no stored geometry" approach `addCurvesAngle`
+ * documents.
+ */
+function applyAngleCurvePick(state: AppState, id: EntityId): AppState {
+  const clicked = state.construction.entities[id];
+  if (!isCurveKind(clicked)) return state;
+
+  const { buffer } = state.toolState;
+  if (buffer.length === 0 || buffer[0] === id) {
+    // First pick, or re-picking the same entity: (re)start the buffer
+    // rather than measuring it against itself.
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+  if (!isCurveKind(state.construction.entities[buffer[0]])) {
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+
+  const added = addCurvesAngle(state.construction, buffer[0], id);
+  return {
+    ...state,
+    construction: added.construction,
+    toolState: { ...state.toolState, buffer: [] },
+  };
+}
+
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case "setTool":
@@ -113,31 +289,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (state.toolState.tool === "intersect") return state;
       // Constructions only exist inside the Poincaré disk.
       if (!isInsideDisk(action)) return state;
-      const result = applyClick(
-        state.construction,
-        state.toolState,
-        action.x,
-        action.y,
-      );
-      // The midpoint tool's buffer fills through applyClick like any other
-      // 2-point tool, but the entity itself needs the view layer's
-      // hyperbolic formula — finish it here once both points are picked.
-      if (
-        state.toolState.tool === "midpoint" &&
-        result.toolState.buffer.length === 2
-      ) {
-        const done = completeMidpoint(result.construction, result.toolState);
-        return {
-          ...state,
-          construction: done.construction,
-          toolState: done.toolState,
-        };
-      }
-      return {
-        ...state,
-        construction: result.construction,
-        toolState: result.toolState,
-      };
+      return applyToolClick(state, action.x, action.y);
     }
     case "dragStart":
       return { ...state, dragId: action.id };
@@ -173,10 +325,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "dragEnd":
       return { ...state, dragId: null };
     case "selectObject":
-      return {
-        ...state,
-        selectedId: state.selectedId === action.id ? null : action.id,
-      };
+      return toggleSelected(state, action.id);
     case "setColor":
       return {
         ...state,
@@ -211,47 +360,34 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
     case "entityClick": {
-      if (state.toolState.tool !== "intersect") return state;
-      const clicked = state.construction.entities[action.id];
-      if (!clicked || !isIntersectable(clicked)) return state;
-
-      const { buffer } = state.toolState;
-      if (buffer.length === 0 || buffer[0] === action.id) {
-        // First pick, or re-clicking the same entity: (re)start the buffer
-        // rather than intersecting it with itself.
-        return {
-          ...state,
-          toolState: { ...state.toolState, buffer: [action.id] },
-        };
+      if (state.toolState.tool === "intersect") {
+        return applyEntityIntersectPick(state, action.id);
       }
-
-      const first = state.construction.entities[buffer[0]];
-      if (!first || !isIntersectable(first)) {
-        return {
-          ...state,
-          toolState: { ...state.toolState, buffer: [action.id] },
-        };
+      if (state.toolState.tool === "angle") {
+        return applyAngleCurvePick(state, action.id);
       }
-
-      // Second pick: add every intersection point between the two curves
-      // (up to two, e.g. where two circles cross twice) in one go.
-      const solutions = intersectEntities(state.construction, first, clicked);
-      let construction = state.construction;
-      solutions.forEach((p, index) => {
-        construction = addIntersectionPoint(
-          construction,
-          p.x,
-          p.y,
-          buffer[0],
-          action.id,
-          index as 0 | 1,
-        ).construction;
-      });
-      return {
-        ...state,
-        construction,
-        toolState: { ...state.toolState, buffer: [] },
-      };
+      return state;
+    }
+    case "entityPick": {
+      // Object-panel counterpart to a canvas click/entityClick, so a tool
+      // can be finished by tapping rows in the left panel instead of
+      // precise points on screen — the reason mobile users get this at
+      // all (see engine/tools.ts's TOOLS doc comment for why intersect and
+      // midpoint each need their own finishing path).
+      const { tool } = state.toolState;
+      if (tool === "select") return toggleSelected(state, action.id);
+      if (tool === "intersect")
+        return applyEntityIntersectPick(state, action.id);
+      if (tool === "angle") {
+        const entity = state.construction.entities[action.id];
+        if (isCurveKind(entity)) return applyAngleCurvePick(state, action.id);
+        const point = getPoint(state.construction, action.id);
+        return point ? applyToolClick(state, point.x, point.y) : state;
+      }
+      const point = getPoint(state.construction, action.id);
+      // Not a point, or a derived point that doesn't currently resolve
+      // (exists: false) — nothing on screen to snap to either, so ignore.
+      return point ? applyToolClick(state, point.x, point.y) : state;
     }
   }
 }

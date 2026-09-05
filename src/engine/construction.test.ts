@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   acquirePoint,
+  addCurvesAngle,
   addFreePoint,
   addIntersectionPoint,
   addLine,
   addMidpoint,
+  addPointsAngle,
   addSegment,
   allPoints,
   deleteEntity,
@@ -27,6 +29,19 @@ describe("construction basics", () => {
     expect(getPoint(r2.construction, r1.id)).toMatchObject({ x: 10, y: 20 });
     expect(getPoint(r2.construction, r2.id)).toMatchObject({ x: -5, y: 7 });
     expect(allPoints(r2.construction)).toHaveLength(2);
+  });
+
+  it("assigns each point a nameIndex fixed at creation, never reused after a delete", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 1, 0);
+    expect(getPoint(p2.construction, p1.id)).toMatchObject({ nameIndex: 0 });
+    expect(getPoint(p2.construction, p2.id)).toMatchObject({ nameIndex: 1 });
+
+    const afterDelete = deleteEntity(p2.construction, p1.id);
+    const p3 = addFreePoint(afterDelete, 2, 0);
+    // p1's nameIndex (0) isn't handed out again; p3 continues from p2's.
+    expect(getPoint(p3.construction, p2.id)).toMatchObject({ nameIndex: 1 });
+    expect(getPoint(p3.construction, p3.id)).toMatchObject({ nameIndex: 2 });
   });
 
   it("getPoint returns null for missing ids and non-point entities", () => {
@@ -259,6 +274,33 @@ describe("deleteEntity", () => {
     expect(after.entities[mid.id]).toBeUndefined();
     // The other source point is untouched.
     expect(getPoint(after, p2.id)).not.toBeNull();
+  });
+
+  it("cascades a points-mode angle: deleting any of its three points removes it", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const angle = addPointsAngle(p3.construction, p1.id, p2.id, p3.id);
+
+    const after = deleteEntity(angle.construction, p2.id);
+    expect(after.entities[angle.id]).toBeUndefined();
+    // The uninvolved points survive.
+    expect(getPoint(after, p1.id)).not.toBeNull();
+    expect(getPoint(after, p3.id)).not.toBeNull();
+  });
+
+  it("cascades a curves-mode angle: deleting either source curve removes it", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const p4 = addFreePoint(p3.construction, 10, 10);
+    const lineA = addLine(p4.construction, p1.id, p3.id);
+    const lineB = addLine(lineA.construction, p2.id, p4.id);
+    const angle = addCurvesAngle(lineB.construction, lineA.id, lineB.id);
+
+    const after = deleteEntity(angle.construction, lineA.id);
+    expect(after.entities[angle.id]).toBeUndefined();
+    expect(after.entities[lineB.id]).toBeDefined();
   });
 
   it("cascades transitively: point -> line -> intersection -> segment built on the intersection", () => {
@@ -542,5 +584,41 @@ describe("recomputeMidpoints", () => {
 
     expect(getPoint(after, first.id)).toMatchObject({ x: 10, y: 20 });
     expect(getPoint(after, second.id)).toMatchObject({ x: 20, y: 40 });
+  });
+});
+
+describe("addPointsAngle / addCurvesAngle", () => {
+  it("stores a points-mode angle's three point ids, in order", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+
+    const angle = addPointsAngle(p3.construction, p1.id, p2.id, p3.id);
+    expect(angle.construction.entities[angle.id]).toMatchObject({
+      kind: "angle",
+      mode: "points",
+      a: p1.id,
+      vertex: p2.id,
+      b: p3.id,
+      color: null,
+      hidden: false,
+    });
+  });
+
+  it("stores a curves-mode angle's two curve ids", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const p4 = addFreePoint(p3.construction, 10, 10);
+    const lineA = addLine(p4.construction, p1.id, p3.id);
+    const lineB = addLine(lineA.construction, p2.id, p4.id);
+
+    const angle = addCurvesAngle(lineB.construction, lineA.id, lineB.id);
+    expect(angle.construction.entities[angle.id]).toMatchObject({
+      kind: "angle",
+      mode: "curves",
+      a: lineA.id,
+      b: lineB.id,
+    });
   });
 });

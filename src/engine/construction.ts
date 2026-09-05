@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 export function emptyConstruction(): Construction {
-  return { entities: {}, order: [], nextId: 1 };
+  return { entities: {}, order: [], nextId: 1, nextPointIndex: 0 };
 }
 
 export interface AddResult {
@@ -30,6 +30,7 @@ function withEntity(
   const id = `e${c.nextId}`;
   return {
     construction: {
+      ...c,
       entities: { ...c.entities, [id]: make(id) },
       order: [...c.order, id],
       nextId: c.nextId + 1,
@@ -38,14 +39,33 @@ function withEntity(
   };
 }
 
+/**
+ * Like `withEntity`, but also hands out and advances the next `nameIndex`
+ * — every point-creating function goes through this instead, so a point's
+ * display name is fixed at birth and never shifts when an earlier point
+ * is later deleted (see `PointEntity`'s doc comment).
+ */
+function withPointEntity(
+  c: Construction,
+  make: (id: EntityId, nameIndex: number) => PointEntity,
+): AddResult {
+  const nameIndex = c.nextPointIndex;
+  const result = withEntity(c, (id) => make(id, nameIndex));
+  return {
+    ...result,
+    construction: { ...result.construction, nextPointIndex: nameIndex + 1 },
+  };
+}
+
 export function addFreePoint(c: Construction, x: number, y: number): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "point",
     x,
     y,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
@@ -91,6 +111,51 @@ export function addCircle(
 }
 
 /**
+ * Add a measured angle at `vertex`, between the rays toward `a` and `b`
+ * (any point kind each). See `PointsAngle`'s doc comment: nothing here is
+ * derived — the actual angle is computed fresh at render time.
+ */
+export function addPointsAngle(
+  c: Construction,
+  a: EntityId,
+  vertex: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "angle",
+    mode: "points",
+    a,
+    vertex,
+    b,
+    color: null,
+    hidden: false,
+  }));
+}
+
+/**
+ * Add a measured angle between two curves (`a`, `b`: a segment/line/circle
+ * id each), at one of their intersection points. See `CurvesAngle`'s doc
+ * comment: the intersection and the angle itself are both computed fresh
+ * at render time, not stored here.
+ */
+export function addCurvesAngle(
+  c: Construction,
+  a: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "angle",
+    mode: "curves",
+    a,
+    b,
+    color: null,
+    hidden: false,
+  }));
+}
+
+/**
  * Add a point at the intersection of two curve entities (`a`, `b`: a
  * segment/line/circle id each). `x`/`y` are the solved coordinates and
  * `branch` picks which of up to two solutions this is — both supplied by
@@ -106,7 +171,7 @@ export function addIntersectionPoint(
   b: EntityId,
   branch: 0 | 1,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "intersection",
     x,
@@ -117,6 +182,7 @@ export function addIntersectionPoint(
     exists: true,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
@@ -133,7 +199,7 @@ export function addMidpoint(
   a: EntityId,
   b: EntityId,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "midpoint",
     x,
@@ -143,6 +209,7 @@ export function addMidpoint(
     exists: true,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
@@ -364,6 +431,8 @@ function dependencies(e: Entity): readonly EntityId[] {
       return [e.a, e.b];
     case "circle":
       return [e.center, e.thru];
+    case "angle":
+      return e.mode === "points" ? [e.a, e.vertex, e.b] : [e.a, e.b];
   }
 }
 

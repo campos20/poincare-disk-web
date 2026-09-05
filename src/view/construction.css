@@ -121,9 +121,13 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-/* Anchor the last group's menu to the right so it doesn't overflow past
-   the toolbar's edge on narrow screens. */
-.tool-group:last-child .tool-menu {
+/* Anchor the toolbar's last group's menu to the right so it doesn't
+   overflow past the toolbar's edge on narrow screens. Scoped to .toolbar
+   specifically — PageMenu's own standalone .tool-group (About/Settings'
+   header has no toolbar, so it's trivially its parent's only/last child
+   too) must keep the default left alignment, or its menu opens toward the
+   header's left edge and clips off-screen. */
+.toolbar .tool-group:last-child .tool-menu {
   left: auto;
   right: 0;
 }
@@ -312,6 +316,10 @@
   color: #7fa7d4;
 }
 
+.object-icon-angle {
+  color: #eaf1f8;
+}
+
 .object-actions {
   display: flex;
   flex: none;
@@ -476,6 +484,29 @@
 .ent-point.selected {
   stroke: #eaf1f8;
   stroke-width: 2.5;
+}
+
+.ent-angle-arc {
+  fill: none;
+  stroke: #eaf1f8;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ent-angle-arc.buffered {
+  stroke: #6ee7b7;
+}
+
+.ent-angle-arc.selected {
+  stroke-width: 3;
+}
+
+.ent-angle-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #eaf1f8;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Fixed height + single line: hint text changes with every tool/step and

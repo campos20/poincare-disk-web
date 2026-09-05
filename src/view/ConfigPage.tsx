@@ -1,10 +1,12 @@
 import { useI18n } from "../i18n/context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { PageMenu } from "./PageMenu";
+import { useDocumentMeta } from "./useDocumentMeta";
 import "./construction.css";
 
 export function ConfigPage() {
   const { t } = useI18n();
+  useDocumentMeta("seo.config.title", "seo.config.description");
 
   return (
     <div className="page-shell">
