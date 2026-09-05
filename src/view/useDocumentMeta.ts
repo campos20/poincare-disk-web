@@ -22,12 +22,15 @@ export function useDocumentMeta(
   useEffect(() => {
     const title = t(titleKey);
     const description = t(descriptionKey);
+    // Query strings and hash fragments (UTM params, etc.) would otherwise
+    // produce a different canonical/og:url per visit for the same page.
+    const url = window.location.origin + window.location.pathname;
     document.title = title;
     setAttr('meta[name="description"]', "content", description);
     setAttr('meta[property="og:title"]', "content", title);
     setAttr('meta[property="og:description"]', "content", description);
-    setAttr('meta[property="og:url"]', "content", window.location.href);
-    setAttr('link[rel="canonical"]', "href", window.location.href);
+    setAttr('meta[property="og:url"]', "content", url);
+    setAttr('link[rel="canonical"]', "href", url);
     setAttr('meta[name="twitter:title"]', "content", title);
     setAttr('meta[name="twitter:description"]', "content", description);
   }, [t, titleKey, descriptionKey]);
