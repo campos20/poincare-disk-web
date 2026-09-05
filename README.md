@@ -1,5 +1,7 @@
 # Poincaré Disk — Constructions
 
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
+
 [![Test](https://github.com/campos20/poincare-disk-web/actions/workflows/test.yml/badge.svg)](https://github.com/campos20/poincare-disk-web/actions/workflows/test.yml)
 [![Deploy](https://github.com/campos20/poincare-disk-web/actions/workflows/deploy.yml/badge.svg)](https://github.com/campos20/poincare-disk-web/actions/workflows/deploy.yml)
 [![Coverage](https://campos20.github.io/poincare-disk-web/coverage-badge.svg)](https://campos20.github.io/poincare-disk-web/coverage-badge.svg)
