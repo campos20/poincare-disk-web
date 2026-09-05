@@ -1,4 +1,5 @@
 import {
+  Angle as AngleIcon,
   Asterisk,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +25,7 @@ const ICONS: Record<Entity["kind"], LucideIcon> = {
   segment: Minus,
   line: Slash,
   circle: Circle,
+  angle: AngleIcon,
 };
 
 const KIND_LABEL: Record<
@@ -33,6 +35,7 @@ const KIND_LABEL: Record<
   segment: "object.segment",
   line: "object.line",
   circle: "object.circle",
+  angle: "object.angle",
 };
 
 /** Swatches offered for object color; matches the app's existing accents. */
@@ -53,11 +56,17 @@ function objectLabel(
   const points = definingPoints(entity)
     .map((id) => names.get(id) ?? "?")
     .join("");
-  return entity.kind === "point" ||
+  if (
+    entity.kind === "point" ||
     entity.kind === "intersection" ||
     entity.kind === "midpoint"
-    ? points
-    : `${t(KIND_LABEL[entity.kind])} ${points}`;
+  ) {
+    return points;
+  }
+  const kindLabel = t(KIND_LABEL[entity.kind]);
+  // A curves-mode angle has no defining points (see naming.ts) — fall back
+  // to the bare kind label rather than "Angle " with a trailing space.
+  return points ? `${kindLabel} ${points}` : kindLabel;
 }
 
 interface Props {

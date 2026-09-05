@@ -91,6 +91,51 @@ export function addCircle(
 }
 
 /**
+ * Add a measured angle at `vertex`, between the rays toward `a` and `b`
+ * (any point kind each). See `PointsAngle`'s doc comment: nothing here is
+ * derived — the actual angle is computed fresh at render time.
+ */
+export function addPointsAngle(
+  c: Construction,
+  a: EntityId,
+  vertex: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "angle",
+    mode: "points",
+    a,
+    vertex,
+    b,
+    color: null,
+    hidden: false,
+  }));
+}
+
+/**
+ * Add a measured angle between two curves (`a`, `b`: a segment/line/circle
+ * id each), at one of their intersection points. See `CurvesAngle`'s doc
+ * comment: the intersection and the angle itself are both computed fresh
+ * at render time, not stored here.
+ */
+export function addCurvesAngle(
+  c: Construction,
+  a: EntityId,
+  b: EntityId,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "angle",
+    mode: "curves",
+    a,
+    b,
+    color: null,
+    hidden: false,
+  }));
+}
+
+/**
  * Add a point at the intersection of two curve entities (`a`, `b`: a
  * segment/line/circle id each). `x`/`y` are the solved coordinates and
  * `branch` picks which of up to two solutions this is — both supplied by
@@ -364,6 +409,8 @@ function dependencies(e: Entity): readonly EntityId[] {
       return [e.a, e.b];
     case "circle":
       return [e.center, e.thru];
+    case "angle":
+      return e.mode === "points" ? [e.a, e.vertex, e.b] : [e.a, e.b];
   }
 }
 

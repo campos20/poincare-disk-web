@@ -4,8 +4,10 @@
  */
 
 import {
+  addCurvesAngle,
   addIntersectionPoint,
   addMidpoint,
+  addPointsAngle,
   applyClick,
   deleteEntity,
   emptyConstruction,
@@ -18,7 +20,7 @@ import {
   setColor,
   setHidden,
 } from "../engine";
-import type { Construction, EntityId, ToolId, ToolState } from "../engine";
+import type { Construction, Entity, EntityId, ToolId, ToolState } from "../engine";
 import { isInsideDisk } from "./disk";
 import { hyperbolicMidpoint } from "./hyperbolicFormulas";
 import {
@@ -100,6 +102,28 @@ function completeMidpoint(
   return { construction: added.construction, toolState: nextToolState };
 }
 
+/** Whether `entity` is a segment/line/circle — the curve kinds pickable by
+ * the intersect tool and the angle tool's curves-mode. */
+export function isCurveKind(entity: Entity | undefined): boolean {
+  return (
+    !!entity &&
+    (entity.kind === "segment" ||
+      entity.kind === "line" ||
+      entity.kind === "circle")
+  );
+}
+
+/** Whether the angle tool's buffer has already committed to curves-mode
+ * (its first pick was a curve). Points-mode has no equivalent check: a
+ * curve click when already committed to points-mode is instead rejected
+ * by `isCurveKind`'s counterpart inside `applyAngleCurvePick`. */
+function angleBufferHasCurve(state: AppState): boolean {
+  const { buffer } = state.toolState;
+  return (
+    buffer.length > 0 && isCurveKind(state.construction.entities[buffer[0]])
+  );
+}
+
 /**
  * Advance the active (non-intersect) tool's buffer with one point at
  * (x, y) — the coordinate a canvas click resolved to, or an existing
@@ -108,23 +132,54 @@ function completeMidpoint(
  * the same acquirePoint threshold applyClick already uses).
  */
 function applyToolClick(state: AppState, x: number, y: number): AppState {
-  const result = applyClick(state.construction, state.toolState, x, y);
+  // The angle tool's buffer commits to a mode (points or curves) on its
+  // first pick. A point click while already curves-committed can't just
+  // extend that buffer — it'd mix a point id into a curve-id buffer — so
+  // it restarts fresh in points-mode instead, the same forgiving
+  // "switch what you meant" behavior as `applyAngleCurvePick`'s own
+  // mismatch case.
+  const startState =
+    state.toolState.tool === "angle" && angleBufferHasCurve(state)
+      ? { ...state, toolState: { ...state.toolState, buffer: [] } }
+      : state;
+
+  const result = applyClick(startState.construction, startState.toolState, x, y);
   // The midpoint tool's buffer fills through applyClick like any other
   // 2-point tool, but the entity itself needs the view layer's
   // hyperbolic formula — finish it here once both points are picked.
   if (
-    state.toolState.tool === "midpoint" &&
+    startState.toolState.tool === "midpoint" &&
     result.toolState.buffer.length === 2
   ) {
     const done = completeMidpoint(result.construction, result.toolState);
     return {
-      ...state,
+      ...startState,
       construction: done.construction,
       toolState: done.toolState,
     };
   }
+  // The angle tool's points-mode (a, vertex, b) also fills through
+  // applyClick like any other buffered tool, but the entity itself needs
+  // no geometry at all — see engine/tools.ts's TOOLS doc comment — so it's
+  // just created directly here once all three are picked.
+  if (
+    startState.toolState.tool === "angle" &&
+    result.toolState.buffer.length === 3
+  ) {
+    const [a, vertex, b] = result.toolState.buffer as [
+      EntityId,
+      EntityId,
+      EntityId,
+    ];
+    const added = addPointsAngle(result.construction, a, vertex, b);
+    return {
+      ...startState,
+      construction: added.construction,
+      toolState: { ...result.toolState, buffer: [] },
+    };
+  }
   return {
-    ...state,
+    ...startState,
     construction: result.construction,
     toolState: result.toolState,
   };
@@ -173,6 +228,38 @@ function applyEntityIntersectPick(state: AppState, id: EntityId): AppState {
   return {
     ...state,
     construction,
+    toolState: { ...state.toolState, buffer: [] },
+  };
+}
+
+/**
+ * The angle tool's curves-mode two-entity buffer, keyed off whatever curve
+ * was picked — via the canvas's 'entityClick' or the object panel's
+ * 'entityPick'. Ignores anything that isn't a segment/line/circle. Unlike
+ * `applyEntityIntersectPick`, the second pick doesn't need to solve for the
+ * curves' intersection — the `CurvesAngle` entity just stores both curve
+ * ids, and the vertex/rays/angle are all resolved fresh at render time
+ * (view/angles.ts), the same "no stored geometry" approach `addCurvesAngle`
+ * documents.
+ */
+function applyAngleCurvePick(state: AppState, id: EntityId): AppState {
+  const clicked = state.construction.entities[id];
+  if (!isCurveKind(clicked)) return state;
+
+  const { buffer } = state.toolState;
+  if (buffer.length === 0 || buffer[0] === id) {
+    // First pick, or re-picking the same entity: (re)start the buffer
+    // rather than measuring it against itself.
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+  if (!isCurveKind(state.construction.entities[buffer[0]])) {
+    return { ...state, toolState: { ...state.toolState, buffer: [id] } };
+  }
+
+  const added = addCurvesAngle(state.construction, buffer[0], id);
+  return {
+    ...state,
+    construction: added.construction,
     toolState: { ...state.toolState, buffer: [] },
   };
 }
@@ -262,8 +349,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
     case "entityClick": {
-      if (state.toolState.tool !== "intersect") return state;
-      return applyEntityIntersectPick(state, action.id);
+      if (state.toolState.tool === "intersect") {
+        return applyEntityIntersectPick(state, action.id);
+      }
+      if (state.toolState.tool === "angle") {
+        return applyAngleCurvePick(state, action.id);
+      }
+      return state;
     }
     case "entityPick": {
       // Object-panel counterpart to a canvas click/entityClick, so a tool
@@ -275,6 +367,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (tool === "select") return toggleSelected(state, action.id);
       if (tool === "intersect")
         return applyEntityIntersectPick(state, action.id);
+      if (tool === "angle") {
+        const entity = state.construction.entities[action.id];
+        if (isCurveKind(entity)) return applyAngleCurvePick(state, action.id);
+        const point = getPoint(state.construction, action.id);
+        return point ? applyToolClick(state, point.x, point.y) : state;
+      }
       const point = getPoint(state.construction, action.id);
       // Not a point, or a derived point that doesn't currently resolve
       // (exists: false) — nothing on screen to snap to either, so ignore.

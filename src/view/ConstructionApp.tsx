@@ -1,8 +1,8 @@
 import { useEffect, useReducer, useState } from "react";
-import type { ToolState } from "../engine";
+import type { Construction, ToolState } from "../engine";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
-import { appReducer, initialAppState } from "./appState";
+import { appReducer, initialAppState, isCurveKind } from "./appState";
 import { ConstructionCanvas } from "./ConstructionCanvas";
 import { ObjectPanel } from "./ObjectPanel";
 import { PageMenu } from "./PageMenu";
@@ -10,7 +10,7 @@ import { Toolbar } from "./Toolbar";
 import { useDocumentMeta } from "./useDocumentMeta";
 import "./construction.css";
 
-function hintKey(toolState: ToolState): MessageKey {
+function hintKey(toolState: ToolState, construction: Construction): MessageKey {
   const step = toolState.buffer.length;
   switch (toolState.tool) {
     case "select":
@@ -27,6 +27,16 @@ function hintKey(toolState: ToolState): MessageKey {
       return step === 0 ? "hint.intersect.first" : "hint.intersect.second";
     case "midpoint":
       return step === 0 ? "hint.midpoint.first" : "hint.midpoint.second";
+    case "angle": {
+      if (step === 0) return "hint.angle.first";
+      if (step === 2) return "hint.angle.points.third";
+      // step === 1: whether we're in points- or curves-mode depends on
+      // what the first pick actually was.
+      const first = construction.entities[toolState.buffer[0]];
+      return isCurveKind(first)
+        ? "hint.angle.curves.second"
+        : "hint.angle.points.second";
+    }
   }
 }
 
@@ -84,7 +94,9 @@ export function ConstructionApp() {
         />
         <ConstructionCanvas state={state} dispatch={dispatch} />
       </div>
-      <footer className="hint-bar">{t(hintKey(state.toolState))}</footer>
+      <footer className="hint-bar">
+        {t(hintKey(state.toolState, state.construction))}
+      </footer>
     </div>
   );
 }

@@ -478,6 +478,29 @@
   stroke-width: 2.5;
 }
 
+.ent-angle-arc {
+  fill: none;
+  stroke: #eaf1f8;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.ent-angle-arc.buffered {
+  stroke: #6ee7b7;
+}
+
+.ent-angle-arc.selected {
+  stroke-width: 3;
+}
+
+.ent-angle-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #eaf1f8;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Fixed height + single line: hint text changes with every tool/step and
    must never resize the canvas above it. */
 .hint-bar {

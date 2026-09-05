@@ -9,6 +9,7 @@ const en = {
   "tool.circle": "Circle",
   "tool.intersect": "Intersect",
   "tool.midpoint": "Midpoint",
+  "tool.angle": "Angle",
   "hint.select": "Drag a point to move it — everything built on it follows.",
   "hint.point": "Click anywhere to place a point.",
   "hint.segment.first": "Segment: click the first endpoint.",
@@ -22,6 +23,12 @@ const en = {
     "Intersect: click the line, segment, or circle to cross it with.",
   "hint.midpoint.first": "Midpoint: click the first point.",
   "hint.midpoint.second": "Midpoint: click the second point.",
+  "hint.angle.first":
+    "Angle: click a point, or a line, segment, or circle.",
+  "hint.angle.points.second": "Angle: click the vertex (the middle point).",
+  "hint.angle.points.third": "Angle: click the second point.",
+  "hint.angle.curves.second":
+    "Angle: click the second line, segment, or circle.",
   "toolbar.aria": "Construction tools",
   "canvas.aria": "Construction canvas",
   "language.aria": "Language",
@@ -46,6 +53,7 @@ const en = {
   "object.segment": "Segment",
   "object.line": "Line",
   "object.circle": "Circle",
+  "object.angle": "Angle",
   "seo.home.title":
     "Poincaré Disk Constructions — Interactive Hyperbolic Geometry",
   "seo.home.description":
@@ -71,6 +79,7 @@ const pt: Record<MessageKey, string> = {
   "tool.circle": "Círculo",
   "tool.intersect": "Interseção",
   "tool.midpoint": "Ponto médio",
+  "tool.angle": "Ângulo",
   "hint.select":
     "Arraste um ponto para movê-lo — tudo construído sobre ele acompanha.",
   "hint.point": "Clique em qualquer lugar para criar um ponto.",
@@ -86,6 +95,12 @@ const pt: Record<MessageKey, string> = {
     "Interseção: clique na reta, segmento ou círculo para cruzar.",
   "hint.midpoint.first": "Ponto médio: clique no primeiro ponto.",
   "hint.midpoint.second": "Ponto médio: clique no segundo ponto.",
+  "hint.angle.first":
+    "Ângulo: clique em um ponto, ou em uma reta, segmento ou círculo.",
+  "hint.angle.points.second": "Ângulo: clique no vértice (o ponto do meio).",
+  "hint.angle.points.third": "Ângulo: clique no segundo ponto.",
+  "hint.angle.curves.second":
+    "Ângulo: clique na segunda reta, segmento ou círculo.",
   "toolbar.aria": "Ferramentas de construção",
   "canvas.aria": "Tela de construção",
   "language.aria": "Idioma",
@@ -110,6 +125,7 @@ const pt: Record<MessageKey, string> = {
   "object.segment": "Segmento",
   "object.line": "Reta",
   "object.circle": "Círculo",
+  "object.angle": "Ângulo",
   "seo.home.title":
     "Construções no Disco de Poincaré — Geometria Hiperbólica Interativa",
   "seo.home.description":

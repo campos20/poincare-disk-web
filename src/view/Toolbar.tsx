@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Angle,
   ChevronDown,
   Circle,
   Diamond,
@@ -22,6 +23,7 @@ const ICONS: Record<ToolId, LucideIcon> = {
   segment: Minus,
   line: Slash,
   circle: Circle,
+  angle: Angle,
 };
 
 interface ToolGroup {
@@ -37,6 +39,7 @@ const GROUPS: readonly ToolGroup[] = [
   { label: "tool.point", tools: ["point", "intersect", "midpoint"] },
   { label: "tool.line", tools: ["segment", "line"] },
   { label: "tool.circle", tools: ["circle"] },
+  { label: "tool.angle", tools: ["angle"] },
 ];
 
 function ToolIcon({ id }: { readonly id: ToolId }) {

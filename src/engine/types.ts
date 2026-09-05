@@ -103,7 +103,41 @@ export interface Circle extends EntityStyle {
   readonly thru: EntityId;
 }
 
-export type Entity = PointEntity | Segment | Line | Circle;
+/**
+ * A measured angle at the vertex, between the rays toward `a` and `b`
+ * (each any point kind). The Poincaré disk is conformal, so the hyperbolic
+ * angle equals the Euclidean angle between the two geodesics' tangent
+ * directions at the vertex — computed fresh at render time from the three
+ * points' current positions (view/angles.ts), the same "no stored
+ * geometry" approach as Segment/Line/Circle above.
+ */
+export interface PointsAngle extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "angle";
+  readonly mode: "points";
+  readonly a: EntityId;
+  readonly vertex: EntityId;
+  readonly b: EntityId;
+}
+
+/**
+ * A measured angle between two curves (segment/line/circle), at one of
+ * their intersection points — also computed fresh at render time
+ * (view/angles.ts), including finding the intersection itself. Unlike the
+ * `intersect` tool, this never materializes the crossing as its own point
+ * entity: it's a measurement overlay, not a construction step.
+ */
+export interface CurvesAngle extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "angle";
+  readonly mode: "curves";
+  readonly a: EntityId;
+  readonly b: EntityId;
+}
+
+export type Angle = PointsAngle | CurvesAngle;
+
+export type Entity = PointEntity | Segment | Line | Circle | Angle;
 
 /** The whole construction: entities by id, plus insertion order for rendering. */
 export interface Construction {

@@ -1,6 +1,8 @@
 export type {
+  Angle,
   Circle,
   Construction,
+  CurvesAngle,
   Entity,
   EntityId,
   EntityStyle,
@@ -9,15 +11,18 @@ export type {
   Line,
   MidpointPoint,
   PointEntity,
+  PointsAngle,
   Segment,
 } from "./types";
 export {
   acquirePoint,
   addCircle,
+  addCurvesAngle,
   addFreePoint,
   addIntersectionPoint,
   addLine,
   addMidpoint,
+  addPointsAngle,
   addSegment,
   allPoints,
   deleteEntity,

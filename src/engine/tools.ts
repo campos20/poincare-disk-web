@@ -17,7 +17,14 @@ import type { Construction, EntityId } from "./types";
 export const SNAP_THRESHOLD = 0.04;
 
 export type ToolId =
-  "select" | "point" | "segment" | "line" | "circle" | "intersect" | "midpoint";
+  | "select"
+  | "point"
+  | "segment"
+  | "line"
+  | "circle"
+  | "intersect"
+  | "midpoint"
+  | "angle";
 
 // Display names are presentation and live in the view's i18n layer;
 // the engine only knows stable ids and click counts.
@@ -40,6 +47,15 @@ export interface ToolDef {
 // as the curve tools but stops short of creating the entity; appState.ts's
 // 'canvasClick' case finishes the job (see hyperbolicFormulas.ts's
 // `hyperbolicMidpoint`).
+//
+// 'angle' clicks pick either 3 points (a, vertex, b) or 2 curves, and which
+// one is only known once the first click lands — so, like 'intersect', its
+// buffering isn't uniform enough for this function alone. The 3-points case
+// still flows through applyClick's generic buffering below (pointsNeeded: 3
+// covers it, same deferred-creation pattern as 'midpoint' — appState.ts's
+// 'canvasClick' case finishes it); the 2-curves case bypasses applyClick
+// entirely, same as 'intersect' (see appState.ts's 'entityClick' action and
+// view/angles.ts for the tangent-based math, both shared with 'intersect').
 export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
   select: { id: "select", pointsNeeded: 0 },
   point: { id: "point", pointsNeeded: 1 },
@@ -48,6 +64,7 @@ export const TOOLS: Readonly<Record<ToolId, ToolDef>> = {
   circle: { id: "circle", pointsNeeded: 2 },
   intersect: { id: "intersect", pointsNeeded: 2 },
   midpoint: { id: "midpoint", pointsNeeded: 2 },
+  angle: { id: "angle", pointsNeeded: 3 },
 };
 
 export const TOOL_ORDER: readonly ToolId[] = [
@@ -58,6 +75,7 @@ export const TOOL_ORDER: readonly ToolId[] = [
   "circle",
   "intersect",
   "midpoint",
+  "angle",
 ];
 
 export interface ToolState {

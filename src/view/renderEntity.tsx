@@ -7,6 +7,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { getPoint } from "../engine";
 import type { Construction, Entity, EntityId } from "../engine";
+import { resolveAngle } from "./angles";
 import { DISK_RADIUS, toScreen } from "./disk";
 import { segmentShape } from "./geometry";
 import type { HyperbolicLine } from "./hyperbolicFormulas";
@@ -15,6 +16,10 @@ import {
   hyperbolicLineThroughPoints,
   hyperbolicSegmentThroughPoints,
 } from "./hyperbolicFormulas";
+
+/** Pixel radius of the small arc drawn at an angle's vertex. */
+const ANGLE_ARC_RADIUS = 26;
+const TWO_PI = 2 * Math.PI;
 
 export interface RenderOptions {
   /** Entity ids buffered by the active tool: point ids for the 2-point
@@ -174,6 +179,73 @@ export function renderEntity(
             cy={c.y}
             r={r}
           />
+        </g>
+      );
+    }
+    case "angle": {
+      if (entity.hidden) return null;
+      // The vertex and rays are resolved fresh from current point/curve
+      // positions every render — same "no stored geometry" approach as
+      // segment/line/circle above (see view/angles.ts).
+      const resolved = resolveAngle(construction, entity);
+      if (!resolved) return null;
+      const { vertex, u, v, radians } = resolved;
+      const center = toScreen(vertex);
+
+      const thetaU = Math.atan2(u.y, u.x);
+      const thetaV = Math.atan2(v.y, v.x);
+      const spanCCW = ((thetaV - thetaU) % TWO_PI + TWO_PI) % TWO_PI;
+      // The arc command always draws the minor (<= π) arc between the two
+      // rays — exactly the angle `radians` already measures — so which
+      // direction that is (sweep-flag) just depends on whether the CCW gap
+      // between them happens to be that minor one.
+      const sweep = spanCCW <= Math.PI;
+      const p1 = {
+        x: center.x + ANGLE_ARC_RADIUS * Math.cos(thetaU),
+        y: center.y + ANGLE_ARC_RADIUS * Math.sin(thetaU),
+      };
+      const p2 = {
+        x: center.x + ANGLE_ARC_RADIUS * Math.cos(thetaV),
+        y: center.y + ANGLE_ARC_RADIUS * Math.sin(thetaV),
+      };
+      const d = `M ${p1.x} ${p1.y} A ${ANGLE_ARC_RADIUS} ${ANGLE_ARC_RADIUS} 0 0 ${
+        sweep ? 1 : 0
+      } ${p2.x} ${p2.y}`;
+
+      // The label sits along the angle's bisector; when u and v point
+      // nearly opposite ways (a near-straight angle), fall back to a
+      // perpendicular of u rather than dividing by a near-zero length.
+      let bx = u.x + v.x;
+      let by = u.y + v.y;
+      const blen = Math.hypot(bx, by);
+      if (blen < 1e-6) {
+        bx = -u.y;
+        by = u.x;
+      } else {
+        bx /= blen;
+        by /= blen;
+      }
+      const labelR = ANGLE_ARC_RADIUS + 18;
+
+      const buffered = opts.highlighted.has(entity.id) ? " buffered" : "";
+      const selected = entity.id === opts.selectedId ? " selected" : "";
+      const degrees = (radians * 180) / Math.PI;
+
+      return (
+        <g key={entity.id}>
+          <path
+            className={`ent-angle-arc${buffered}${selected}`}
+            style={strokeStyle(entity, opts)}
+            d={d}
+          />
+          <text
+            className="ent-angle-label"
+            textAnchor="middle"
+            x={center.x + bx * labelR}
+            y={center.y + by * labelR}
+          >
+            {`${degrees.toFixed(1)}°`}
+          </text>
         </g>
       );
     }

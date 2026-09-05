@@ -111,6 +111,26 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       clickCandidate.current = entityId
         ? { id: entityId, x: e.clientX, y: e.clientY }
         : null;
+    } else if (toolState.tool === "angle") {
+      // Like 'select', a point under the pointer takes priority; unlike
+      // 'select', a curve hit here is a real pick (via 'entityClick'), not
+      // just a property-selection candidate — the angle tool accepts both
+      // points and curves, deciding which on the first click (see
+      // appState.ts's 'angleBufferHasCurve').
+      const nearPoint =
+        findPointNear(construction, model.x, model.y, SNAP_THRESHOLD) !==
+        null;
+      if (!nearPoint) {
+        const target = e.target as Element;
+        const id = target
+          .closest("[data-entity-id]")
+          ?.getAttribute("data-entity-id");
+        if (id) {
+          dispatch({ type: "entityClick", id });
+          return;
+        }
+      }
+      dispatch({ type: "canvasClick", x: model.x, y: model.y });
     } else {
       dispatch({ type: "canvasClick", x: model.x, y: model.y });
     }
