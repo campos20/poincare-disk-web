@@ -46,6 +46,17 @@ const en = {
   "object.segment": "Segment",
   "object.line": "Line",
   "object.circle": "Circle",
+  "seo.home.title":
+    "Poincaré Disk Constructions — Interactive Hyperbolic Geometry",
+  "seo.home.description":
+    "Build points, segments, lines, circles, midpoints, and intersections inside the Poincaré disk model and explore non-Euclidean, hyperbolic geometry interactively, right in your browser.",
+  "seo.about.title":
+    "About the Poincaré Disk Model — Poincaré Disk Constructions",
+  "seo.about.description":
+    "The hyperbolic geometry and Poincaré disk model math behind this interactive non-Euclidean geometry construction tool.",
+  "seo.config.title": "Settings — Poincaré Disk Constructions",
+  "seo.config.description":
+    "Change the language and other settings for the Poincaré Disk Constructions app.",
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;
@@ -99,6 +110,17 @@ const pt: Record<MessageKey, string> = {
   "object.segment": "Segmento",
   "object.line": "Reta",
   "object.circle": "Círculo",
+  "seo.home.title":
+    "Construções no Disco de Poincaré — Geometria Hiperbólica Interativa",
+  "seo.home.description":
+    "Construa pontos, segmentos, retas, círculos, pontos médios e interseções dentro do modelo do disco de Poincaré e explore a geometria não euclidiana e hiperbólica de forma interativa, direto no navegador.",
+  "seo.about.title":
+    "Sobre o Modelo do Disco de Poincaré — Construções no Disco de Poincaré",
+  "seo.about.description":
+    "A matemática de geometria hiperbólica e do modelo do disco de Poincaré por trás desta ferramenta interativa de construções em geometria não euclidiana.",
+  "seo.config.title": "Configurações — Construções no Disco de Poincaré",
+  "seo.config.description":
+    "Altere o idioma e outras configurações do aplicativo Construções no Disco de Poincaré.",
 };
 
 export const MESSAGES: Record<Locale, Record<MessageKey, string>> = { en, pt };

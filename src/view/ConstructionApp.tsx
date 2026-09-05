@@ -7,6 +7,7 @@ import { ConstructionCanvas } from "./ConstructionCanvas";
 import { ObjectPanel } from "./ObjectPanel";
 import { PageMenu } from "./PageMenu";
 import { Toolbar } from "./Toolbar";
+import { useDocumentMeta } from "./useDocumentMeta";
 import "./construction.css";
 
 function hintKey(toolState: ToolState): MessageKey {
@@ -33,6 +34,7 @@ export function ConstructionApp() {
   const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const { t } = useI18n();
+  useDocumentMeta("seo.home.title", "seo.home.description");
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://campos20.github.io/poincare-disk-web/sitemap.xml
