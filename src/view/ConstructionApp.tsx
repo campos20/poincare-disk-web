@@ -74,6 +74,7 @@ export function ConstructionApp() {
           collapsed={panelCollapsed}
           selectedId={state.selectedId}
           onToggle={() => setPanelCollapsed((c) => !c)}
+          onPick={(id) => dispatch({ type: "entityPick", id })}
           onSelect={(id) => dispatch({ type: "selectObject", id })}
           onSetColor={(id, color) => dispatch({ type: "setColor", id, color })}
           onToggleHidden={(id) => dispatch({ type: "toggleHidden", id })}

@@ -65,6 +65,19 @@ interface Props {
   readonly collapsed: boolean;
   readonly selectedId: EntityId | null;
   readonly onToggle: () => void;
+  /**
+   * Plain click/tap on a row: feeds the active tool, same as clicking the
+   * object on the canvas would (a point for a point-needing tool, a curve
+   * for the intersect tool) — this is what lets a construction be built
+   * entirely from the panel on a screen too small to tap precisely.
+   */
+  readonly onPick: (id: EntityId) => void;
+  /**
+   * Right-click or long-press (both fire the browser's native
+   * 'contextmenu' event): select the object for property editing — color,
+   * visibility, delete. Kept off the plain click so it can't collide with
+   * onPick above.
+   */
   readonly onSelect: (id: EntityId) => void;
   readonly onSetColor: (id: EntityId, color: string | null) => void;
   readonly onToggleHidden: (id: EntityId) => void;
@@ -76,6 +89,7 @@ export function ObjectPanel({
   collapsed,
   selectedId,
   onToggle,
+  onPick,
   onSelect,
   onSetColor,
   onToggleHidden,
@@ -134,7 +148,13 @@ export function ObjectPanel({
                   type="button"
                   className="object-row"
                   aria-pressed={selected}
-                  onClick={() => onSelect(entity.id)}
+                  onClick={() => onPick(entity.id)}
+                  onContextMenu={(e) => {
+                    // Right-click on desktop, long-press on mobile — both
+                    // fire this event natively, so no manual timer needed.
+                    e.preventDefault();
+                    onSelect(entity.id);
+                  }}
                 >
                   <Icon
                     size={14}

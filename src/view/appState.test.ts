@@ -141,6 +141,77 @@ describe("object panel actions", () => {
   });
 });
 
+describe("entityPick (object-panel counterpart to a canvas/entity click)", () => {
+  it("toggles selection under the select tool, like selectObject", () => {
+    const p = addFreePoint(emptyConstruction(), 0, 0);
+    let state: AppState = {
+      ...withTool("select"),
+      construction: p.construction,
+    };
+
+    state = appReducer(state, { type: "entityPick", id: p.id });
+    expect(state.selectedId).toBe(p.id);
+
+    state = appReducer(state, { type: "entityPick", id: p.id });
+    expect(state.selectedId).toBeNull();
+  });
+
+  it("feeds a point-needing tool's buffer using the point's own coordinates", () => {
+    const a = addFreePoint(emptyConstruction(), 0.2, 0.2);
+    const b = addFreePoint(a.construction, -0.3, 0.1);
+    let state: AppState = {
+      ...withTool("segment"),
+      construction: b.construction,
+    };
+
+    state = appReducer(state, { type: "entityPick", id: a.id });
+    expect(state.toolState.buffer).toEqual([a.id]);
+
+    state = appReducer(state, { type: "entityPick", id: b.id });
+    expect(state.toolState.buffer).toHaveLength(0);
+    const segments = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "segment");
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({ a: a.id, b: b.id });
+  });
+
+  it("ignores a curve entity for a point-needing tool", () => {
+    const a = addFreePoint(emptyConstruction(), 0.2, 0.2);
+    const b = addFreePoint(a.construction, -0.3, 0.1);
+    const seg = addSegment(b.construction, a.id, b.id);
+    const state: AppState = {
+      ...withTool("point"),
+      construction: seg.construction,
+    };
+
+    const after = appReducer(state, { type: "entityPick", id: seg.id });
+    expect(after).toBe(state);
+  });
+
+  it("feeds the intersect tool's buffer from a curve row, same as entityClick", () => {
+    const c1 = addFreePoint(emptyConstruction(), -0.15, 0);
+    const t1 = addFreePoint(c1.construction, 0.15, 0);
+    const c2 = addFreePoint(t1.construction, 0.15, 0);
+    const t2 = addFreePoint(c2.construction, -0.15, 0);
+    const circleA = addCircle(t2.construction, c1.id, t1.id);
+    const circleB = addCircle(circleA.construction, c2.id, t2.id);
+    let state: AppState = {
+      ...withTool("intersect"),
+      construction: circleB.construction,
+    };
+
+    state = appReducer(state, { type: "entityPick", id: circleA.id });
+    expect(state.toolState.buffer).toEqual([circleA.id]);
+
+    state = appReducer(state, { type: "entityPick", id: circleB.id });
+    expect(state.toolState.buffer).toHaveLength(0);
+    expect(
+      allPoints(state.construction).filter((p) => p.kind === "intersection"),
+    ).toHaveLength(2);
+  });
+});
+
 describe("midpoint tool", () => {
   it("creates the midpoint once both points are clicked, via the hyperbolic formula", () => {
     let state = appReducer(withTool("midpoint"), {
