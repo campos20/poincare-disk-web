@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCircle,
   addFreePoint,
+  addLine,
   addSegment,
   allPoints,
   emptyConstruction,
@@ -322,5 +323,125 @@ describe("intersect tool", () => {
 
     const after = getPoint(state.construction, crossId)!;
     expect(after.x === before.x && after.y === before.y).toBe(false);
+  });
+});
+
+describe("angle tool", () => {
+  it("points-mode: three clicks create a points-mode angle (a, vertex, b)", () => {
+    let state = appReducer(withTool("angle"), {
+      type: "canvasClick",
+      x: -0.3,
+      y: -0.2,
+    });
+    expect(state.toolState.buffer).toHaveLength(1);
+
+    state = appReducer(state, { type: "canvasClick", x: 0, y: 0 });
+    expect(state.toolState.buffer).toHaveLength(2);
+
+    state = appReducer(state, { type: "canvasClick", x: 0.3, y: -0.2 });
+    expect(state.toolState.buffer).toHaveLength(0);
+
+    const angles = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "angle");
+    expect(angles).toHaveLength(1);
+    expect(angles[0]).toMatchObject({ mode: "points" });
+  });
+
+  function twoCrossingLines() {
+    const p1 = addFreePoint(emptyConstruction(), 0.5, 0);
+    const p2 = addFreePoint(p1.construction, -0.5, 0);
+    const p3 = addFreePoint(p2.construction, 0, 0.5);
+    const p4 = addFreePoint(p3.construction, 0, -0.5);
+    const lineA = addLine(p4.construction, p1.id, p2.id);
+    const lineB = addLine(lineA.construction, p3.id, p4.id);
+    return {
+      construction: lineB.construction,
+      lineA: lineA.id,
+      lineB: lineB.id,
+    };
+  }
+
+  it("curves-mode: two entityClicks on curves create a curves-mode angle", () => {
+    const { construction, lineA, lineB } = twoCrossingLines();
+    let state: AppState = { ...withTool("angle"), construction };
+
+    state = appReducer(state, { type: "entityClick", id: lineA });
+    expect(state.toolState.buffer).toEqual([lineA]);
+
+    state = appReducer(state, { type: "entityClick", id: lineB });
+    expect(state.toolState.buffer).toHaveLength(0);
+
+    const angles = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "angle");
+    expect(angles).toHaveLength(1);
+    expect(angles[0]).toMatchObject({ mode: "curves", a: lineA, b: lineB });
+  });
+
+  it("a curve click after a point pick restarts fresh in curves-mode", () => {
+    const { construction, lineA, lineB } = twoCrossingLines();
+    const p = addFreePoint(construction, 0.2, 0.2);
+    let state: AppState = {
+      ...withTool("angle"),
+      construction: p.construction,
+    };
+
+    state = appReducer(state, { type: "canvasClick", x: 0.2, y: 0.2 });
+    expect(state.toolState.buffer).toEqual([p.id]);
+
+    state = appReducer(state, { type: "entityClick", id: lineA });
+    expect(state.toolState.buffer).toEqual([lineA]);
+
+    state = appReducer(state, { type: "entityClick", id: lineB });
+    expect(state.toolState.buffer).toHaveLength(0);
+    const angles = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "angle");
+    expect(angles).toHaveLength(1);
+  });
+
+  it("a point click after a curve pick restarts fresh in points-mode", () => {
+    const { construction, lineA } = twoCrossingLines();
+    const a = addFreePoint(construction, 0.2, 0.2);
+    const vertex = addFreePoint(a.construction, 0, 0);
+    const b = addFreePoint(vertex.construction, 0.2, -0.2);
+    let state: AppState = {
+      ...withTool("angle"),
+      construction: b.construction,
+    };
+
+    state = appReducer(state, { type: "entityClick", id: lineA });
+    expect(state.toolState.buffer).toEqual([lineA]);
+
+    // A point click restarts the buffer fresh in points-mode rather than
+    // mixing a point id into the curve-id buffer.
+    state = appReducer(state, { type: "canvasClick", x: 0.2, y: 0.2 });
+    expect(state.toolState.buffer).toEqual([a.id]);
+
+    state = appReducer(state, { type: "canvasClick", x: 0, y: 0 });
+    state = appReducer(state, { type: "canvasClick", x: 0.2, y: -0.2 });
+    expect(state.toolState.buffer).toHaveLength(0);
+    const angles = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "angle");
+    expect(angles).toHaveLength(1);
+    expect(angles[0]).toMatchObject({ mode: "points" });
+  });
+
+  it("entityPick routes a curve row to curves-mode and a point row to points-mode", () => {
+    const { construction, lineA, lineB } = twoCrossingLines();
+    let state: AppState = { ...withTool("angle"), construction };
+
+    state = appReducer(state, { type: "entityPick", id: lineA });
+    expect(state.toolState.buffer).toEqual([lineA]);
+    state = appReducer(state, { type: "entityPick", id: lineB });
+    expect(state.toolState.buffer).toHaveLength(0);
+
+    const angles = state.construction.order
+      .map((id) => state.construction.entities[id])
+      .filter((e) => e.kind === "angle");
+    expect(angles).toHaveLength(1);
+    expect(angles[0]).toMatchObject({ mode: "curves" });
   });
 });

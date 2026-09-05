@@ -312,6 +312,10 @@
   color: #7fa7d4;
 }
 
+.object-icon-angle {
+  color: #eaf1f8;
+}
+
 .object-actions {
   display: flex;
   flex: none;

@@ -23,8 +23,7 @@ const en = {
     "Intersect: click the line, segment, or circle to cross it with.",
   "hint.midpoint.first": "Midpoint: click the first point.",
   "hint.midpoint.second": "Midpoint: click the second point.",
-  "hint.angle.first":
-    "Angle: click a point, or a line, segment, or circle.",
+  "hint.angle.first": "Angle: click a point, or a line, segment, or circle.",
   "hint.angle.points.second": "Angle: click the vertex (the middle point).",
   "hint.angle.points.third": "Angle: click the second point.",
   "hint.angle.curves.second":

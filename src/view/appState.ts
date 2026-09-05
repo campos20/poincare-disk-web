@@ -20,7 +20,13 @@ import {
   setColor,
   setHidden,
 } from "../engine";
-import type { Construction, Entity, EntityId, ToolId, ToolState } from "../engine";
+import type {
+  Construction,
+  Entity,
+  EntityId,
+  ToolId,
+  ToolState,
+} from "../engine";
 import { isInsideDisk } from "./disk";
 import { hyperbolicMidpoint } from "./hyperbolicFormulas";
 import {
@@ -143,7 +149,12 @@ function applyToolClick(state: AppState, x: number, y: number): AppState {
       ? { ...state, toolState: { ...state.toolState, buffer: [] } }
       : state;
 
-  const result = applyClick(startState.construction, startState.toolState, x, y);
+  const result = applyClick(
+    startState.construction,
+    startState.toolState,
+    x,
+    y,
+  );
   // The midpoint tool's buffer fills through applyClick like any other
   // 2-point tool, but the entity itself needs the view layer's
   // hyperbolic formula — finish it here once both points are picked.

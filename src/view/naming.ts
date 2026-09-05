@@ -45,6 +45,8 @@ export function definingPoints(entity: Entity): readonly EntityId[] {
       // "points" mode names cleanly as e.g. "Angle ABC" (vertex in the
       // middle); "curves" mode has no natural point basis — its own two
       // curve ids aren't point ids — so it falls back to a bare "Angle".
-      return entity.mode === "points" ? [entity.a, entity.vertex, entity.b] : [];
+      return entity.mode === "points"
+        ? [entity.a, entity.vertex, entity.b]
+        : [];
   }
 }

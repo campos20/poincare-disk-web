@@ -118,8 +118,7 @@ export function ConstructionCanvas({ state, dispatch }: Props) {
       // points and curves, deciding which on the first click (see
       // appState.ts's 'angleBufferHasCurve').
       const nearPoint =
-        findPointNear(construction, model.x, model.y, SNAP_THRESHOLD) !==
-        null;
+        findPointNear(construction, model.x, model.y, SNAP_THRESHOLD) !== null;
       if (!nearPoint) {
         const target = e.target as Element;
         const id = target

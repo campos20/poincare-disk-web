@@ -194,7 +194,7 @@ export function renderEntity(
 
       const thetaU = Math.atan2(u.y, u.x);
       const thetaV = Math.atan2(v.y, v.x);
-      const spanCCW = ((thetaV - thetaU) % TWO_PI + TWO_PI) % TWO_PI;
+      const spanCCW = (((thetaV - thetaU) % TWO_PI) + TWO_PI) % TWO_PI;
       // The arc command always draws the minor (<= π) arc between the two
       // rays — exactly the angle `radians` already measures — so which
       // direction that is (sweep-flag) just depends on whether the CCW gap
