@@ -25,6 +25,7 @@ export interface FreePoint extends EntityStyle {
   readonly kind: "point";
   readonly x: number;
   readonly y: number;
+  readonly nameIndex: number;
 }
 
 /**
@@ -52,6 +53,7 @@ export interface IntersectionPoint extends EntityStyle {
   readonly b: EntityId;
   readonly branch: 0 | 1;
   readonly exists: boolean;
+  readonly nameIndex: number;
 }
 
 /**
@@ -75,8 +77,16 @@ export interface MidpointPoint extends EntityStyle {
   readonly a: EntityId;
   readonly b: EntityId;
   readonly exists: boolean;
+  readonly nameIndex: number;
 }
 
+/**
+ * Every point kind carries `nameIndex`: its rank among points *ever
+ * created* (0, 1, 2, …), assigned once at creation and never
+ * recalculated. Display names (view/naming.ts's `pointName`) are derived
+ * from it rather than from a point's current position among survivors, so
+ * deleting an earlier point doesn't rename the ones after it.
+ */
 export type PointEntity = FreePoint | IntersectionPoint | MidpointPoint;
 
 /** Straight segment between two points. */
@@ -144,4 +154,6 @@ export interface Construction {
   readonly entities: Readonly<Record<EntityId, Entity>>;
   readonly order: readonly EntityId[];
   readonly nextId: number;
+  /** Next `nameIndex` to hand out to a newly-created point (see `PointEntity`). */
+  readonly nextPointIndex: number;
 }

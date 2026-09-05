@@ -31,6 +31,19 @@ describe("construction basics", () => {
     expect(allPoints(r2.construction)).toHaveLength(2);
   });
 
+  it("assigns each point a nameIndex fixed at creation, never reused after a delete", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 1, 0);
+    expect(getPoint(p2.construction, p1.id)).toMatchObject({ nameIndex: 0 });
+    expect(getPoint(p2.construction, p2.id)).toMatchObject({ nameIndex: 1 });
+
+    const afterDelete = deleteEntity(p2.construction, p1.id);
+    const p3 = addFreePoint(afterDelete, 2, 0);
+    // p1's nameIndex (0) isn't handed out again; p3 continues from p2's.
+    expect(getPoint(p3.construction, p2.id)).toMatchObject({ nameIndex: 1 });
+    expect(getPoint(p3.construction, p3.id)).toMatchObject({ nameIndex: 2 });
+  });
+
   it("getPoint returns null for missing ids and non-point entities", () => {
     const p1 = addFreePoint(emptyConstruction(), 0, 0);
     const p2 = addFreePoint(p1.construction, 10, 0);

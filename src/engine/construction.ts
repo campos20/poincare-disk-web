@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 export function emptyConstruction(): Construction {
-  return { entities: {}, order: [], nextId: 1 };
+  return { entities: {}, order: [], nextId: 1, nextPointIndex: 0 };
 }
 
 export interface AddResult {
@@ -30,6 +30,7 @@ function withEntity(
   const id = `e${c.nextId}`;
   return {
     construction: {
+      ...c,
       entities: { ...c.entities, [id]: make(id) },
       order: [...c.order, id],
       nextId: c.nextId + 1,
@@ -38,14 +39,33 @@ function withEntity(
   };
 }
 
+/**
+ * Like `withEntity`, but also hands out and advances the next `nameIndex`
+ * — every point-creating function goes through this instead, so a point's
+ * display name is fixed at birth and never shifts when an earlier point
+ * is later deleted (see `PointEntity`'s doc comment).
+ */
+function withPointEntity(
+  c: Construction,
+  make: (id: EntityId, nameIndex: number) => PointEntity,
+): AddResult {
+  const nameIndex = c.nextPointIndex;
+  const result = withEntity(c, (id) => make(id, nameIndex));
+  return {
+    ...result,
+    construction: { ...result.construction, nextPointIndex: nameIndex + 1 },
+  };
+}
+
 export function addFreePoint(c: Construction, x: number, y: number): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "point",
     x,
     y,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
@@ -151,7 +171,7 @@ export function addIntersectionPoint(
   b: EntityId,
   branch: 0 | 1,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "intersection",
     x,
@@ -162,6 +182,7 @@ export function addIntersectionPoint(
     exists: true,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
@@ -178,7 +199,7 @@ export function addMidpoint(
   a: EntityId,
   b: EntityId,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withPointEntity(c, (id, nameIndex) => ({
     id,
     kind: "midpoint",
     x,
@@ -188,6 +209,7 @@ export function addMidpoint(
     exists: true,
     color: null,
     hidden: false,
+    nameIndex,
   }));
 }
 
