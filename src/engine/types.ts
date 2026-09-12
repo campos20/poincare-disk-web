@@ -128,6 +128,12 @@ export interface PointsAngle extends EntityStyle {
   readonly a: EntityId;
   readonly vertex: EntityId;
   readonly b: EntityId;
+  /** This angle's rank among angles *ever created* — same fixed-at-birth,
+   * never-recalculated convention as `PointEntity.nameIndex`. Lets
+   * view/naming.ts's `angleLabel` give it a stable "angle1", "angle2", …
+   * name to type into an `AngleExpression` formula, one that survives an
+   * earlier angle being deleted. */
+  readonly index: number;
 }
 
 /**
@@ -143,11 +149,49 @@ export interface CurvesAngle extends EntityStyle {
   readonly mode: "curves";
   readonly a: EntityId;
   readonly b: EntityId;
+  /** See `PointsAngle.index`. */
+  readonly index: number;
 }
 
 export type Angle = PointsAngle | CurvesAngle;
 
-export type Entity = PointEntity | Segment | Line | Circle | Angle;
+/**
+ * One node of an `AngleExpression`'s parsed formula tree (view/expressions.ts's
+ * `parseAngleExpression`). Plain JSON-serializable data — numbers, entity
+ * ids, and nested nodes — like every other entity field, so a construction
+ * still round-trips through file.ts without special-casing this.
+ */
+export type ExpressionNode =
+  | { readonly kind: "const"; readonly value: number }
+  | { readonly kind: "ref"; readonly id: EntityId }
+  | { readonly kind: "neg"; readonly arg: ExpressionNode }
+  | {
+      readonly kind: "add" | "sub" | "mul" | "div";
+      readonly left: ExpressionNode;
+      readonly right: ExpressionNode;
+    };
+
+/**
+ * A value computed by combining other angles' measurements with arithmetic
+ * — e.g. "2*angle1 + angle2" — typed by the user as `formula` and parsed
+ * into `ast` at creation time (view/expressions.ts's `parseAngleExpression`,
+ * which resolves each identifier against view/naming.ts's `angleLabels`).
+ * Every number literal in `ast` is degrees, matching how angle measurements
+ * are shown everywhere else in the app. Evaluating it
+ * (view/expressions.ts's `evaluateExpression`) resolves each `ref` to the
+ * angle it names and returns null — same "currently undefined" convention
+ * as `IntersectionPoint`/`MidpointPoint` — when a referenced angle doesn't
+ * currently resolve, or when a division by zero occurs.
+ */
+export interface AngleExpression extends EntityStyle {
+  readonly id: EntityId;
+  readonly kind: "expression";
+  readonly formula: string;
+  readonly ast: ExpressionNode;
+}
+
+export type Entity =
+  PointEntity | Segment | Line | Circle | Angle | AngleExpression;
 
 /** The whole construction: entities by id, plus insertion order for rendering. */
 export interface Construction {
@@ -156,4 +200,6 @@ export interface Construction {
   readonly nextId: number;
   /** Next `nameIndex` to hand out to a newly-created point (see `PointEntity`). */
   readonly nextPointIndex: number;
+  /** Next `index` to hand out to a newly-created angle (see `PointsAngle.index`). */
+  readonly nextAngleIndex: number;
 }

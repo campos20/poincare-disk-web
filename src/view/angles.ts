@@ -8,7 +8,7 @@
  * is curves/points → the angle between them.
  */
 
-import type { Construction, CurvesAngle, PointsAngle } from "../engine";
+import type { Angle, Construction, CurvesAngle, PointsAngle } from "../engine";
 import { getPoint } from "../engine";
 import {
   distanceFromOrigin,
@@ -134,4 +134,22 @@ export function resolveAngle(
   return entity.mode === "points"
     ? resolvePointsAngle(construction, entity)
     : resolveCurvesAngle(construction, entity);
+}
+
+/** An angle entity's current measurement in degrees, or null if it doesn't
+ * currently resolve (see `resolveAngle`). Shared by the object panel's row
+ * value and expressions.ts's `ref` evaluation — renderEntity.tsx's on-canvas
+ * label instead reuses the `resolved.radians` it already has, to avoid
+ * resolving the same angle twice. */
+export function angleDegrees(
+  construction: Construction,
+  entity: Angle,
+): number | null {
+  const resolved = resolveAngle(construction, entity);
+  return resolved ? (resolved.radians * 180) / Math.PI : null;
+}
+
+/** "42.3°" formatting for a value already in degrees. */
+export function formatDegrees(degrees: number): string {
+  return `${degrees.toFixed(1)}°`;
 }

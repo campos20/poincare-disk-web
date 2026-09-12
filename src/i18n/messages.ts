@@ -35,6 +35,13 @@ const en = {
   "nav.construction": "Construction",
   "nav.about": "About",
   "nav.config": "Settings",
+  "file.menu": "File",
+  "file.menu.aria": "File",
+  "file.save": "Save",
+  "file.open": "Open",
+  "file.clear": "Clear",
+  "file.confirmClear": "Clear the current construction? This can't be undone.",
+  "file.invalid": "This file isn't a Poincaré disk construction.",
   "about.title": "About",
   "about.placeholder":
     "The hyperbolic geometry equations behind this construction will be documented here.",
@@ -53,6 +60,9 @@ const en = {
   "object.line": "Line",
   "object.circle": "Circle",
   "object.angle": "Angle",
+  "expression.placeholder": "e.g. 2*angle1 + angle2",
+  "expression.aria": "New angle expression",
+  "expression.add": "Add",
   "seo.home.title":
     "Poincaré Disk Constructions — Interactive Hyperbolic Geometry",
   "seo.home.description":
@@ -107,6 +117,14 @@ const pt: Record<MessageKey, string> = {
   "nav.construction": "Construção",
   "nav.about": "Sobre",
   "nav.config": "Configurações",
+  "file.menu": "Arquivo",
+  "file.menu.aria": "Arquivo",
+  "file.save": "Salvar",
+  "file.open": "Abrir",
+  "file.clear": "Limpar",
+  "file.confirmClear":
+    "Limpar a construção atual? Esta ação não pode ser desfeita.",
+  "file.invalid": "Este arquivo não é uma construção do Disco de Poincaré.",
   "about.title": "Sobre",
   "about.placeholder":
     "As equações de geometria hiperbólica por trás desta construção serão documentadas aqui.",
@@ -125,6 +143,9 @@ const pt: Record<MessageKey, string> = {
   "object.line": "Reta",
   "object.circle": "Círculo",
   "object.angle": "Ângulo",
+  "expression.placeholder": "ex.: 2*angle1 + angle2",
+  "expression.aria": "Nova expressão de ângulo",
+  "expression.add": "Adicionar",
   "seo.home.title":
     "Construções no Disco de Poincaré — Geometria Hiperbólica Interativa",
   "seo.home.description":

@@ -320,6 +320,18 @@
   color: #eaf1f8;
 }
 
+.object-icon-expression {
+  color: #6ee7b7;
+}
+
+.object-value {
+  flex: none;
+  padding-left: 0.35rem;
+  font-size: 0.75rem;
+  color: #8b97a5;
+  white-space: nowrap;
+}
+
 .object-actions {
   display: flex;
   flex: none;
@@ -346,6 +358,14 @@
 
 .icon-button[aria-pressed="true"] {
   color: #8b97a5;
+}
+
+.object-full-name {
+  flex-basis: 100%;
+  padding: 0.1rem 0.5rem 0 1.75rem;
+  font-size: 0.75rem;
+  color: #b8c2cd;
+  word-break: break-word;
 }
 
 .object-colors {
@@ -383,6 +403,42 @@
   padding: 0.35rem 0.5rem;
   font-size: 0.8rem;
   color: #5c6773;
+}
+
+.expression-input {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-top: 1px solid #232a33;
+}
+
+.expression-input-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.expression-input-field {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: #dbe2ea;
+  background: #11151b;
+  border: 1px solid #2a323d;
+  border-radius: 6px;
+}
+
+.expression-input-field:focus {
+  outline: none;
+  border-color: #4a5568;
+}
+
+.expression-error {
+  font-size: 0.72rem;
+  color: #f4708a;
 }
 
 .point-label {

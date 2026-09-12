@@ -4,8 +4,13 @@ import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
 import { appReducer, initialAppState, isCurveKind } from "./appState";
 import { ConstructionCanvas } from "./ConstructionCanvas";
+import { FileMenu } from "./FileMenu";
 import { ObjectPanel } from "./ObjectPanel";
 import { PageMenu } from "./PageMenu";
+import {
+  loadPersistedConstruction,
+  savePersistedConstruction,
+} from "./persistence";
 import { Toolbar } from "./Toolbar";
 import { useDocumentMeta } from "./useDocumentMeta";
 import "./construction.css";
@@ -41,10 +46,24 @@ function hintKey(toolState: ToolState, construction: Construction): MessageKey {
 }
 
 export function ConstructionApp() {
-  const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
+  // Lazy init (runs once, on mount) rather than a post-mount effect, so a
+  // returning visitor's scene is there on the very first render instead of
+  // flashing empty first — restores across both a route change (this
+  // component unmounts on navigating to /about or /config) and a browser
+  // restart, since both go through the same localStorage key.
+  const [state, dispatch] = useReducer(appReducer, undefined, () => {
+    const persisted = loadPersistedConstruction();
+    return persisted
+      ? { ...initialAppState(), construction: persisted }
+      : initialAppState();
+  });
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const { t } = useI18n();
   useDocumentMeta("seo.home.title", "seo.home.description");
+
+  useEffect(() => {
+    savePersistedConstruction(state.construction);
+  }, [state.construction]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -79,6 +98,12 @@ export function ConstructionApp() {
           active={state.toolState.tool}
           onSelect={(tool) => dispatch({ type: "setTool", tool })}
         />
+        <FileMenu
+          construction={state.construction}
+          onLoad={(construction) =>
+            dispatch({ type: "loadConstruction", construction })
+          }
+        />
       </header>
       <div className="app-body">
         <ObjectPanel
@@ -91,6 +116,9 @@ export function ConstructionApp() {
           onSetColor={(id, color) => dispatch({ type: "setColor", id, color })}
           onToggleHidden={(id) => dispatch({ type: "toggleHidden", id })}
           onDelete={(id) => dispatch({ type: "deleteObject", id })}
+          onAddAngleExpression={(formula, ast) =>
+            dispatch({ type: "addAngleExpression", formula, ast })
+          }
         />
         <ConstructionCanvas state={state} dispatch={dispatch} />
       </div>
