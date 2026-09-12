@@ -56,7 +56,8 @@ export type AppAction =
   | { type: "toggleHidden"; id: EntityId }
   | { type: "deleteObject"; id: EntityId }
   | { type: "entityClick"; id: EntityId }
-  | { type: "entityPick"; id: EntityId };
+  | { type: "entityPick"; id: EntityId }
+  | { type: "loadConstruction"; construction: Construction };
 
 export function initialAppState(): AppState {
   return {
@@ -389,5 +390,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // (exists: false) — nothing on screen to snap to either, so ignore.
       return point ? applyToolClick(state, point.x, point.y) : state;
     }
+    case "loadConstruction":
+      // Replace the whole construction (e.g. from an opened file) and drop
+      // everything tied to the construction it replaces — an in-progress
+      // tool buffer, drag, or panel selection would otherwise point at ids
+      // that no longer mean anything.
+      return {
+        construction: action.construction,
+        toolState: initialToolState(),
+        dragId: null,
+        selectedId: null,
+      };
   }
 }

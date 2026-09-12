@@ -445,3 +445,32 @@ describe("angle tool", () => {
     expect(angles[0]).toMatchObject({ mode: "curves" });
   });
 });
+
+describe("loadConstruction", () => {
+  it("replaces the construction and resets tool/drag/selection state", () => {
+    const point = addFreePoint(emptyConstruction(), 0.1, 0.1);
+    let state: AppState = {
+      ...withTool("segment"),
+      construction: point.construction,
+      dragId: point.id,
+      selectedId: point.id,
+    };
+    state = appReducer(state, {
+      type: "canvasClick",
+      x: 0.2,
+      y: 0.2,
+    });
+    expect(state.toolState.buffer).toHaveLength(1);
+
+    const loaded = addFreePoint(emptyConstruction(), 0.5, -0.5).construction;
+    state = appReducer(state, {
+      type: "loadConstruction",
+      construction: loaded,
+    });
+
+    expect(state.construction).toBe(loaded);
+    expect(state.toolState).toEqual(initialAppState().toolState);
+    expect(state.dragId).toBeNull();
+    expect(state.selectedId).toBeNull();
+  });
+});
