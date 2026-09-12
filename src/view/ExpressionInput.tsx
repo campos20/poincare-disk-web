@@ -65,7 +65,11 @@ export function ExpressionInput({ construction, onAdd }: Props) {
           <Plus size={14} aria-hidden />
         </button>
       </div>
-      {error && <div className="expression-error">{error}</div>}
+      {error && (
+        <div className="expression-error" role="alert">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

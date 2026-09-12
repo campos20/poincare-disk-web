@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Eraser, FileUp, FolderOpen, Save } from "lucide-react";
 import { emptyConstruction } from "../engine";
 import type { Construction } from "../engine";
@@ -75,7 +76,7 @@ export function FileMenu({ construction, onLoad }: Props) {
     }
   };
 
-  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChosen = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;

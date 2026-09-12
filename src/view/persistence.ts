@@ -22,10 +22,15 @@ type WritableStorage = Pick<Storage, "setItem">;
 /** The last-autosaved construction, or null if there isn't one, storage is
  * unavailable (e.g. private browsing), or the stored value doesn't parse. */
 export function loadPersistedConstruction(
-  storage: ReadableStorage = localStorage,
+  storage?: ReadableStorage,
 ): Construction | null {
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    // Resolved inside the try, not as the parameter's default value: a
+    // default is evaluated before the function body runs, so a browser that
+    // throws on merely accessing `localStorage` (or a caller with no such
+    // global at all) would otherwise throw past this catch instead of
+    // falling back to null.
+    const raw = (storage ?? localStorage).getItem(STORAGE_KEY);
     return raw ? parseConstructionFile(raw) : null;
   } catch {
     return null;
@@ -36,10 +41,15 @@ export function loadPersistedConstruction(
  * full, since autosave is a convenience, not a guarantee. */
 export function savePersistedConstruction(
   construction: Construction,
-  storage: WritableStorage = localStorage,
+  storage?: WritableStorage,
 ): void {
   try {
-    storage.setItem(STORAGE_KEY, serializeConstruction(construction));
+    // See loadPersistedConstruction's comment on resolving the default here
+    // rather than as the parameter's default value.
+    (storage ?? localStorage).setItem(
+      STORAGE_KEY,
+      serializeConstruction(construction),
+    );
   } catch {
     // Storage unavailable or full — nothing more we can do here.
   }

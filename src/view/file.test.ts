@@ -109,4 +109,92 @@ describe("serializeConstruction / parseConstructionFile", () => {
       ConstructionFileError,
     );
   });
+
+  it("rejects a version other than the current one", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.version = 2;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects an inherited-property id (prototype pollution via `order`)", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    // "toString" isn't an own key of `entities`, only inherited from
+    // Object.prototype — a naive `id in entities` check would accept it.
+    data.construction.order.push("toString");
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects an order that omits an existing entity", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.construction.order.pop();
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a duplicate id in order", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.construction.order.push(data.construction.order[0]);
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a stale nextId that would collide with an existing entity", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.construction.nextId = 1;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a stale nextPointIndex that would collide with an existing point", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.construction.nextPointIndex = 0;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a stale nextAngleIndex that would collide with an existing angle", () => {
+    const construction = sampleConstructionWithExpression();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    data.construction.nextAngleIndex = 0;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects an expression referencing a non-angle entity", () => {
+    const construction = sampleConstructionWithExpression();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    const [exprId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "expression",
+    ) as [string, { ast: { right: { id: string } } }];
+    const [pointId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "point",
+    ) as [string, unknown];
+    data.construction.entities[exprId].ast.right.id = pointId;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
 });

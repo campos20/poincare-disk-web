@@ -59,4 +59,16 @@ describe("loadPersistedConstruction / savePersistedConstruction", () => {
       savePersistedConstruction(emptyConstruction(), storage),
     ).not.toThrow();
   });
+
+  it("doesn't throw when no storage is passed and there's no global localStorage", () => {
+    // vitest's node environment has no `localStorage` global at all, so
+    // omitting the argument here exercises the exact case the default
+    // parameter previously got wrong: resolving `localStorage` as the
+    // parameter's default value throws a ReferenceError *before* the
+    // function body's try/catch ever runs. Both calls must still honor the
+    // documented "best effort, never throws" contract.
+    expect(() => loadPersistedConstruction()).not.toThrow();
+    expect(loadPersistedConstruction()).toBeNull();
+    expect(() => savePersistedConstruction(emptyConstruction())).not.toThrow();
+  });
 });
