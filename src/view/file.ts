@@ -57,6 +57,49 @@ function refOk(entities: Record<string, unknown>, ref: unknown): boolean {
   return typeof ref === "string" && hasOwn(entities, ref);
 }
 
+function isPointKind(entity: Record<string, unknown>): boolean {
+  return (
+    entity.kind === "point" ||
+    entity.kind === "intersection" ||
+    entity.kind === "midpoint"
+  );
+}
+
+function isCurveKind(entity: Record<string, unknown>): boolean {
+  return (
+    entity.kind === "segment" ||
+    entity.kind === "line" ||
+    entity.kind === "circle"
+  );
+}
+
+/**
+ * `ref` resolves to an entity whose `kind` satisfies `kindOk` — e.g. a
+ * segment's endpoints must be points, an angle's curves-mode operands must
+ * be curves. Without this, a hand-edited file could point, say, a
+ * segment's endpoint at a circle: existence-only `refOk` would accept it,
+ * and it'd only fail later, silently, when getPoint/curveOf return null for
+ * the wrong kind at render time — losing the object instead of being
+ * rejected up front.
+ */
+function refOkKind(
+  entities: Record<string, unknown>,
+  ref: unknown,
+  kindOk: (entity: Record<string, unknown>) => boolean,
+): boolean {
+  if (typeof ref !== "string" || !hasOwn(entities, ref)) return false;
+  const target = entities[ref];
+  return isRecord(target) && kindOk(target);
+}
+
+function pointRefOk(entities: Record<string, unknown>, ref: unknown): boolean {
+  return refOkKind(entities, ref, isPointKind);
+}
+
+function curveRefOk(entities: Record<string, unknown>, ref: unknown): boolean {
+  return refOkKind(entities, ref, isCurveKind);
+}
+
 function isValidEntity(
   raw: unknown,
   id: EntityId,
@@ -72,40 +115,43 @@ function isValidEntity(
         typeof raw.nameIndex === "number"
       );
     case "intersection":
+      // a/b are the two curve entities crossed to produce this point
+      // (engine/types.ts's IntersectionPoint doc comment).
       return (
         typeof raw.x === "number" &&
         typeof raw.y === "number" &&
         typeof raw.nameIndex === "number" &&
         typeof raw.exists === "boolean" &&
         (raw.branch === 0 || raw.branch === 1) &&
-        refOk(entities, raw.a) &&
-        refOk(entities, raw.b)
+        curveRefOk(entities, raw.a) &&
+        curveRefOk(entities, raw.b)
       );
     case "midpoint":
+      // a/b are the two points it's the midpoint of.
       return (
         typeof raw.x === "number" &&
         typeof raw.y === "number" &&
         typeof raw.nameIndex === "number" &&
         typeof raw.exists === "boolean" &&
-        refOk(entities, raw.a) &&
-        refOk(entities, raw.b)
+        pointRefOk(entities, raw.a) &&
+        pointRefOk(entities, raw.b)
       );
     case "segment":
     case "line":
-      return refOk(entities, raw.a) && refOk(entities, raw.b);
+      return pointRefOk(entities, raw.a) && pointRefOk(entities, raw.b);
     case "circle":
-      return refOk(entities, raw.center) && refOk(entities, raw.thru);
+      return pointRefOk(entities, raw.center) && pointRefOk(entities, raw.thru);
     case "angle":
       if (typeof raw.index !== "number") return false;
       if (raw.mode === "points") {
         return (
-          refOk(entities, raw.a) &&
-          refOk(entities, raw.vertex) &&
-          refOk(entities, raw.b)
+          pointRefOk(entities, raw.a) &&
+          pointRefOk(entities, raw.vertex) &&
+          pointRefOk(entities, raw.b)
         );
       }
       if (raw.mode === "curves") {
-        return refOk(entities, raw.a) && refOk(entities, raw.b);
+        return curveRefOk(entities, raw.a) && curveRefOk(entities, raw.b);
       }
       return false;
     case "expression":
@@ -125,7 +171,10 @@ function isValidExpressionNode(
   if (!isRecord(raw)) return false;
   switch (raw.kind) {
     case "const":
-      return typeof raw.value === "number";
+      // `typeof` alone also accepts Infinity/-Infinity/NaN — e.g. from
+      // parsing the JSON numeric literal `1e999` — which would otherwise
+      // load "successfully" and then render as "Infinity°".
+      return typeof raw.value === "number" && Number.isFinite(raw.value);
     case "ref": {
       // A formula can only ever reference an angle (view/expressions.ts's
       // parser resolves identifiers against angle labels only) — a

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addAngleExpression,
+  addCurvesAngle,
   addFreePoint,
   addPointsAngle,
   addSegment,
@@ -20,8 +21,17 @@ function sampleConstruction() {
   c = a.construction;
   const b = addFreePoint(c, -0.3, 0.1);
   c = b.construction;
-  c = addSegment(c, a.id, b.id).construction;
-  c = addIntersectionPoint(c, 0, 0, a.id, b.id, 0).construction;
+  const p3 = addFreePoint(c, 0.2, -0.1);
+  c = p3.construction;
+  const p4 = addFreePoint(c, -0.1, 0.3);
+  c = p4.construction;
+  const seg1 = addSegment(c, a.id, b.id);
+  c = seg1.construction;
+  // The intersection's a/b reference the two curves crossed, not the
+  // points that define them — matching engine/types.ts's IntersectionPoint.
+  const seg2 = addSegment(c, p3.id, p4.id);
+  c = seg2.construction;
+  c = addIntersectionPoint(c, 0, 0, seg1.id, seg2.id, 0).construction;
   return c;
 }
 
@@ -33,6 +43,8 @@ function sampleConstructionWithExpression() {
   c = p2.construction;
   const p3 = addFreePoint(c, 0, 0.5);
   c = p3.construction;
+  const seg = addSegment(c, p1.id, p2.id);
+  c = seg.construction;
   const angle = addPointsAngle(c, p1.id, p2.id, p3.id);
   c = angle.construction;
   const ast: ExpressionNode = {
@@ -193,6 +205,77 @@ describe("serializeConstruction / parseConstructionFile", () => {
       ([, e]) => (e as { kind: string }).kind === "point",
     ) as [string, unknown];
     data.construction.entities[exprId].ast.right.id = pointId;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a segment endpoint that resolves but isn't a point", () => {
+    const construction = sampleConstructionWithExpression();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    const [angleId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "angle",
+    ) as [string, unknown];
+    const [segmentId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "segment",
+    ) as [string, { a: string }];
+    data.construction.entities[segmentId].a = angleId;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects an intersection whose source resolves but isn't a curve", () => {
+    const construction = sampleConstruction();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    const [pointId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "point",
+    ) as [string, unknown];
+    const [intersectionId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "intersection",
+    ) as [string, { a: string }];
+    data.construction.entities[intersectionId].a = pointId;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a curves-mode angle operand that resolves but isn't a curve", () => {
+    let c = emptyConstruction();
+    const a = addFreePoint(c, 0, 0);
+    c = a.construction;
+    const b = addFreePoint(c, 0.5, 0);
+    c = b.construction;
+    const p3 = addFreePoint(c, 0, 0.5);
+    c = p3.construction;
+    const p4 = addFreePoint(c, 0.5, 0.5);
+    c = p4.construction;
+    const seg1 = addSegment(c, a.id, b.id);
+    c = seg1.construction;
+    const seg2 = addSegment(c, p3.id, p4.id);
+    c = seg2.construction;
+    const angle = addCurvesAngle(c, seg1.id, seg2.id);
+    c = angle.construction;
+
+    const text = serializeConstruction(c);
+    const data = JSON.parse(text);
+    data.construction.entities[angle.id].a = a.id;
+    expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
+      ConstructionFileError,
+    );
+  });
+
+  it("rejects a non-finite expression constant (e.g. from a 1e999 literal)", () => {
+    const construction = sampleConstructionWithExpression();
+    const text = serializeConstruction(construction);
+    const data = JSON.parse(text);
+    const [exprId] = Object.entries(data.construction.entities).find(
+      ([, e]) => (e as { kind: string }).kind === "expression",
+    ) as [string, { ast: { left: { value: number } } }];
+    // JSON.parse("1e999") is Infinity, same as this direct assignment.
+    data.construction.entities[exprId].ast.left.value = Infinity;
     expect(() => parseConstructionFile(JSON.stringify(data))).toThrow(
       ConstructionFileError,
     );
