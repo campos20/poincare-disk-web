@@ -168,6 +168,7 @@ export function ObjectPanel({
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
             const selected = entity.id === selectedId;
+            const label = objectLabel(entity, names, t);
             const value = objectValue(entity, construction);
             const vanished =
               (entity.kind === "intersection" || entity.kind === "midpoint") &&
@@ -204,8 +205,13 @@ export function ObjectPanel({
                     className={`object-icon object-icon-${entity.kind}`}
                     style={entity.color ? { color: entity.color } : undefined}
                   />
-                  <span className="object-label">
-                    {objectLabel(entity, names, t)}
+                  {/* `title` covers the panel-too-narrow case: the label is
+                      elided with CSS text-overflow, and this is what lets a
+                      hover (desktop) reveal the untruncated text — mobile has
+                      no hover, so the same text is repeated below when the
+                      row is long-press-selected instead. */}
+                  <span className="object-label" title={label}>
+                    {label}
                   </span>
                 </button>
                 {value && <span className="object-value">{value}</span>}
@@ -232,6 +238,7 @@ export function ObjectPanel({
                     <Trash2 size={14} aria-hidden />
                   </button>
                 </div>
+                {selected && <div className="object-full-name">{label}</div>}
                 {selected && (
                   <div className="object-colors">
                     {PALETTE.map((color) => (

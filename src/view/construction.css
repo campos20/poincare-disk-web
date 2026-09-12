@@ -360,6 +360,14 @@
   color: #8b97a5;
 }
 
+.object-full-name {
+  flex-basis: 100%;
+  padding: 0.1rem 0.5rem 0 1.75rem;
+  font-size: 0.75rem;
+  color: #b8c2cd;
+  word-break: break-word;
+}
+
 .object-colors {
   display: flex;
   flex-basis: 100%;
