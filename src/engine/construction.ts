@@ -5,9 +5,11 @@
  */
 
 import type {
+  Angle,
   Construction,
   Entity,
   EntityId,
+  ExpressionNode,
   FreePoint,
   IntersectionPoint,
   MidpointPoint,
@@ -15,7 +17,13 @@ import type {
 } from "./types";
 
 export function emptyConstruction(): Construction {
-  return { entities: {}, order: [], nextId: 1, nextPointIndex: 0 };
+  return {
+    entities: {},
+    order: [],
+    nextId: 1,
+    nextPointIndex: 0,
+    nextAngleIndex: 0,
+  };
 }
 
 export interface AddResult {
@@ -54,6 +62,25 @@ function withPointEntity(
   return {
     ...result,
     construction: { ...result.construction, nextPointIndex: nameIndex + 1 },
+  };
+}
+
+/**
+ * Like `withPointEntity`, but hands out and advances `nextAngleIndex`
+ * instead — every angle-creating function goes through this, so an angle's
+ * reference label (view/naming.ts's `angleLabel`) is fixed at birth and
+ * never shifts when an earlier angle is later deleted, same reasoning as
+ * `withPointEntity`.
+ */
+function withAngleEntity(
+  c: Construction,
+  make: (id: EntityId, index: number) => Angle,
+): AddResult {
+  const index = c.nextAngleIndex;
+  const result = withEntity(c, (id) => make(id, index));
+  return {
+    ...result,
+    construction: { ...result.construction, nextAngleIndex: index + 1 },
   };
 }
 
@@ -121,7 +148,7 @@ export function addPointsAngle(
   vertex: EntityId,
   b: EntityId,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withAngleEntity(c, (id, index) => ({
     id,
     kind: "angle",
     mode: "points",
@@ -130,6 +157,7 @@ export function addPointsAngle(
     b,
     color: null,
     hidden: false,
+    index,
   }));
 }
 
@@ -144,12 +172,36 @@ export function addCurvesAngle(
   a: EntityId,
   b: EntityId,
 ): AddResult {
-  return withEntity(c, (id) => ({
+  return withAngleEntity(c, (id, index) => ({
     id,
     kind: "angle",
     mode: "curves",
     a,
     b,
+    color: null,
+    hidden: false,
+    index,
+  }));
+}
+
+/**
+ * Add a computed value built from other angles' measurements by arithmetic
+ * — e.g. "2*angle1 + angle2". Like `addIntersectionPoint`/`addMidpoint`,
+ * the engine just stores what it's given: `formula` and its already-parsed
+ * `ast` both come from the caller (view/expressions.ts's
+ * `parseAngleExpression`), since parsing needs view/naming.ts's display
+ * names for angles, which the engine has no notion of.
+ */
+export function addAngleExpression(
+  c: Construction,
+  formula: string,
+  ast: ExpressionNode,
+): AddResult {
+  return withEntity(c, (id) => ({
+    id,
+    kind: "expression",
+    formula,
+    ast,
     color: null,
     hidden: false,
   }));
@@ -419,6 +471,24 @@ export function setHidden(
   return { ...c, entities: { ...c.entities, [id]: { ...e, hidden } } };
 }
 
+/** The entity ids an `ExpressionNode` references, gathered recursively —
+ * `dependencies()`'s counterpart for an `AngleExpression`'s formula tree. */
+function expressionRefs(node: ExpressionNode): readonly EntityId[] {
+  switch (node.kind) {
+    case "const":
+      return [];
+    case "ref":
+      return [node.id];
+    case "neg":
+      return expressionRefs(node.arg);
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+      return [...expressionRefs(node.left), ...expressionRefs(node.right)];
+  }
+}
+
 /** The other entities an entity can't exist without. */
 function dependencies(e: Entity): readonly EntityId[] {
   switch (e.kind) {
@@ -433,6 +503,8 @@ function dependencies(e: Entity): readonly EntityId[] {
       return [e.center, e.thru];
     case "angle":
       return e.mode === "points" ? [e.a, e.vertex, e.b] : [e.a, e.b];
+    case "expression":
+      return expressionRefs(e.ast);
   }
 }
 

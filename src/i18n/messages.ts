@@ -60,6 +60,9 @@ const en = {
   "object.line": "Line",
   "object.circle": "Circle",
   "object.angle": "Angle",
+  "expression.placeholder": "e.g. 2*angle1 + angle2",
+  "expression.aria": "New angle expression",
+  "expression.add": "Add",
   "seo.home.title":
     "Poincaré Disk Constructions — Interactive Hyperbolic Geometry",
   "seo.home.description":
@@ -140,6 +143,9 @@ const pt: Record<MessageKey, string> = {
   "object.line": "Reta",
   "object.circle": "Círculo",
   "object.angle": "Ângulo",
+  "expression.placeholder": "ex.: 2*angle1 + angle2",
+  "expression.aria": "Nova expressão de ângulo",
+  "expression.add": "Adicionar",
   "seo.home.title":
     "Construções no Disco de Poincaré — Geometria Hiperbólica Interativa",
   "seo.home.description":

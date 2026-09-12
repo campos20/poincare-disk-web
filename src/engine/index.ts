@@ -1,11 +1,13 @@
 export type {
   Angle,
+  AngleExpression,
   Circle,
   Construction,
   CurvesAngle,
   Entity,
   EntityId,
   EntityStyle,
+  ExpressionNode,
   FreePoint,
   IntersectionPoint,
   Line,
@@ -16,6 +18,7 @@ export type {
 } from "./types";
 export {
   acquirePoint,
+  addAngleExpression,
   addCircle,
   addCurvesAngle,
   addFreePoint,

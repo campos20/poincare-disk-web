@@ -20,6 +20,27 @@ export function pointName(index: number): string {
   return generation === 0 ? letter : `${letter}${generation}`;
 }
 
+/** The nth angle's reference label — angle1, angle2, … (1-based, since
+ * "angle0" reads oddly) — for typing into an `AngleExpression` formula;
+ * stable via `PointsAngle`/`CurvesAngle`'s own `index`, same
+ * never-renumbered convention as `pointName`. */
+export function angleLabel(index: number): string {
+  return `angle${index + 1}`;
+}
+
+/** Every angle's reference label, keyed by id — `parseAngleExpression`
+ * inverts this to resolve identifiers back to entity ids. */
+export function angleLabels(
+  construction: Construction,
+): ReadonlyMap<EntityId, string> {
+  const labels = new Map<EntityId, string>();
+  for (const id of construction.order) {
+    const e = construction.entities[id];
+    if (e.kind === "angle") labels.set(id, angleLabel(e.index));
+  }
+  return labels;
+}
+
 /** Every point's display name, keyed by id, derived from its `nameIndex`. */
 export function pointNames(
   construction: Construction,
@@ -50,5 +71,9 @@ export function definingPoints(entity: Entity): readonly EntityId[] {
       return entity.mode === "points"
         ? [entity.a, entity.vertex, entity.b]
         : [];
+    case "expression":
+      // Named by its formula text instead (ObjectPanel's objectLabel) —
+      // no defining points at all.
+      return [];
   }
 }

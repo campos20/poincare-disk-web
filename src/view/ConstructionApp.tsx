@@ -116,6 +116,9 @@ export function ConstructionApp() {
           onSetColor={(id, color) => dispatch({ type: "setColor", id, color })}
           onToggleHidden={(id) => dispatch({ type: "toggleHidden", id })}
           onDelete={(id) => dispatch({ type: "deleteObject", id })}
+          onAddAngleExpression={(formula, ast) =>
+            dispatch({ type: "addAngleExpression", formula, ast })
+          }
         />
         <ConstructionCanvas state={state} dispatch={dispatch} />
       </div>

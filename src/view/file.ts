@@ -10,7 +10,7 @@
  * to replace the live construction.
  */
 
-import type { Construction, Entity, EntityId } from "../engine";
+import type { Construction, Entity, EntityId, ExpressionNode } from "../engine";
 
 export const CONSTRUCTION_FILE_FORMAT = "poincare-disk-web/construction";
 export const CONSTRUCTION_FILE_VERSION = 1;
@@ -88,6 +88,7 @@ function isValidEntity(
     case "circle":
       return refOk(entities, raw.center) && refOk(entities, raw.thru);
     case "angle":
+      if (typeof raw.index !== "number") return false;
       if (raw.mode === "points") {
         return (
           refOk(entities, raw.a) &&
@@ -99,6 +100,36 @@ function isValidEntity(
         return refOk(entities, raw.a) && refOk(entities, raw.b);
       }
       return false;
+    case "expression":
+      return (
+        typeof raw.formula === "string" &&
+        isValidExpressionNode(raw.ast, entities)
+      );
+    default:
+      return false;
+  }
+}
+
+function isValidExpressionNode(
+  raw: unknown,
+  entities: Record<string, unknown>,
+): raw is ExpressionNode {
+  if (!isRecord(raw)) return false;
+  switch (raw.kind) {
+    case "const":
+      return typeof raw.value === "number";
+    case "ref":
+      return refOk(entities, raw.id);
+    case "neg":
+      return isValidExpressionNode(raw.arg, entities);
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+      return (
+        isValidExpressionNode(raw.left, entities) &&
+        isValidExpressionNode(raw.right, entities)
+      );
     default:
       return false;
   }
@@ -115,7 +146,8 @@ function isValidConstruction(raw: unknown): raw is Construction {
   }
   if (
     typeof raw.nextId !== "number" ||
-    typeof raw.nextPointIndex !== "number"
+    typeof raw.nextPointIndex !== "number" ||
+    typeof raw.nextAngleIndex !== "number"
   ) {
     return false;
   }

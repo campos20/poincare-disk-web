@@ -7,7 +7,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { getPoint } from "../engine";
 import type { Construction, Entity, EntityId } from "../engine";
-import { resolveAngle } from "./angles";
+import { formatDegrees, resolveAngle } from "./angles";
 import { DISK_RADIUS, toScreen } from "./disk";
 import { segmentShape } from "./geometry";
 import type { HyperbolicLine } from "./hyperbolicFormulas";
@@ -244,10 +244,14 @@ export function renderEntity(
             x={center.x + bx * labelR}
             y={center.y + by * labelR}
           >
-            {`${degrees.toFixed(1)}°`}
+            {formatDegrees(degrees)}
           </text>
         </g>
       );
     }
+    case "expression":
+      // A computed value, not a geometric object — nothing to draw on the
+      // canvas (it only shows up in the object panel).
+      return null;
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import {
+  addAngleExpression,
   addCurvesAngle,
   addIntersectionPoint,
   addMidpoint,
@@ -24,6 +25,7 @@ import type {
   Construction,
   Entity,
   EntityId,
+  ExpressionNode,
   ToolId,
   ToolState,
 } from "../engine";
@@ -57,7 +59,8 @@ export type AppAction =
   | { type: "deleteObject"; id: EntityId }
   | { type: "entityClick"; id: EntityId }
   | { type: "entityPick"; id: EntityId }
-  | { type: "loadConstruction"; construction: Construction };
+  | { type: "loadConstruction"; construction: Construction }
+  | { type: "addAngleExpression"; formula: string; ast: ExpressionNode };
 
 export function initialAppState(): AppState {
   return {
@@ -400,6 +403,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         toolState: initialToolState(),
         dragId: null,
         selectedId: null,
+      };
+    case "addAngleExpression":
+      // The formula's already been parsed into `ast` by the caller (the
+      // object panel's expression input, via view/expressions.ts) — it
+      // needs view/naming.ts's angle labels to resolve identifiers, which
+      // this reducer has no more direct access to than any other view
+      // code, so there's nothing left to do here but store it.
+      return {
+        ...state,
+        construction: addAngleExpression(
+          state.construction,
+          action.formula,
+          action.ast,
+        ).construction,
       };
   }
 }

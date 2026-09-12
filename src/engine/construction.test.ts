@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   acquirePoint,
+  addAngleExpression,
   addCurvesAngle,
   addFreePoint,
   addIntersectionPoint,
@@ -19,6 +20,7 @@ import {
   setColor,
   setHidden,
 } from "./construction";
+import type { ExpressionNode } from "./types";
 
 describe("construction basics", () => {
   it("adds free points with distinct ids and stored coordinates", () => {
@@ -620,5 +622,60 @@ describe("addPointsAngle / addCurvesAngle", () => {
       a: lineA.id,
       b: lineB.id,
     });
+  });
+
+  it("assigns each angle a stable index that isn't renumbered on delete", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const p4 = addFreePoint(p3.construction, -10, 0);
+
+    const angleA = addPointsAngle(p4.construction, p1.id, p2.id, p3.id);
+    const angleB = addPointsAngle(angleA.construction, p1.id, p2.id, p4.id);
+    expect(angleA.construction.entities[angleA.id]).toMatchObject({ index: 0 });
+    expect(angleB.construction.entities[angleB.id]).toMatchObject({ index: 1 });
+
+    // Deleting the first angle must not shift the second's index — it's
+    // the stable name view/naming.ts derives "angle1"/"angle2" from.
+    const afterDelete = deleteEntity(angleB.construction, angleA.id);
+    expect(afterDelete.entities[angleB.id]).toMatchObject({ index: 1 });
+
+    const angleC = addPointsAngle(afterDelete, p1.id, p2.id, p3.id);
+    expect(angleC.construction.entities[angleC.id]).toMatchObject({ index: 2 });
+  });
+});
+
+describe("addAngleExpression", () => {
+  it("stores the formula and ast as given", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const angle = addPointsAngle(p3.construction, p1.id, p2.id, p3.id);
+
+    const ast: ExpressionNode = {
+      kind: "mul",
+      left: { kind: "const", value: 2 },
+      right: { kind: "ref", id: angle.id },
+    };
+    const expr = addAngleExpression(angle.construction, "2*angle1", ast);
+    expect(expr.construction.entities[expr.id]).toMatchObject({
+      kind: "expression",
+      formula: "2*angle1",
+      ast,
+      color: null,
+      hidden: false,
+    });
+  });
+
+  it("cascades delete to an expression referencing a deleted angle", () => {
+    const p1 = addFreePoint(emptyConstruction(), 0, 0);
+    const p2 = addFreePoint(p1.construction, 10, 0);
+    const p3 = addFreePoint(p2.construction, 0, 10);
+    const angle = addPointsAngle(p3.construction, p1.id, p2.id, p3.id);
+    const ast: ExpressionNode = { kind: "ref", id: angle.id };
+    const expr = addAngleExpression(angle.construction, "angle1", ast);
+
+    const after = deleteEntity(expr.construction, angle.id);
+    expect(after.entities[expr.id]).toBeUndefined();
   });
 });

@@ -9,14 +9,18 @@ import {
   Eye,
   EyeOff,
   Minus,
+  Sigma,
   Slash,
   Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { Construction, Entity, EntityId } from "../engine";
+import type { Construction, Entity, EntityId, ExpressionNode } from "../engine";
 import { useI18n } from "../i18n/context";
 import type { MessageKey } from "../i18n/messages";
-import { definingPoints, pointNames } from "./naming";
+import { angleDegrees, formatDegrees } from "./angles";
+import { evaluateExpression } from "./expressions";
+import { ExpressionInput } from "./ExpressionInput";
+import { angleLabel, definingPoints, pointNames } from "./naming";
 
 const ICONS: Record<Entity["kind"], LucideIcon> = {
   point: Dot,
@@ -26,10 +30,11 @@ const ICONS: Record<Entity["kind"], LucideIcon> = {
   line: Slash,
   circle: Circle,
   angle: AngleIcon,
+  expression: Sigma,
 };
 
 const KIND_LABEL: Record<
-  Exclude<Entity["kind"], "point" | "intersection" | "midpoint">,
+  Exclude<Entity["kind"], "point" | "intersection" | "midpoint" | "expression">,
   MessageKey
 > = {
   segment: "object.segment",
@@ -53,6 +58,11 @@ function objectLabel(
   names: ReadonlyMap<EntityId, string>,
   t: (key: MessageKey) => string,
 ): string {
+  // An expression is identified by its own formula text, not by points —
+  // that's also the identifier other formulas would reference, but
+  // expressions can't currently reference each other (see naming.ts).
+  if (entity.kind === "expression") return entity.formula;
+
   const points = definingPoints(entity)
     .map((id) => names.get(id) ?? "?")
     .join("");
@@ -66,7 +76,27 @@ function objectLabel(
   const kindLabel = t(KIND_LABEL[entity.kind]);
   // A curves-mode angle has no defining points (see naming.ts) — fall back
   // to the bare kind label rather than "Angle " with a trailing space.
-  return points ? `${kindLabel} ${points}` : kindLabel;
+  const base = points ? `${kindLabel} ${points}` : kindLabel;
+  // Append the reference name (angle1, angle2, …) an expression formula
+  // would use to point at this angle.
+  return entity.kind === "angle"
+    ? `${base} (${angleLabel(entity.index)})`
+    : base;
+}
+
+/** The degree value shown next to an angle or expression row, or null for
+ * every other kind (nothing to show) or when it doesn't currently resolve. */
+function objectValue(
+  entity: Entity,
+  construction: Construction,
+): string | null {
+  const degrees =
+    entity.kind === "angle"
+      ? angleDegrees(construction, entity)
+      : entity.kind === "expression"
+        ? evaluateExpression(construction, entity.ast)
+        : null;
+  return degrees === null ? null : formatDegrees(degrees);
 }
 
 interface Props {
@@ -91,6 +121,7 @@ interface Props {
   readonly onSetColor: (id: EntityId, color: string | null) => void;
   readonly onToggleHidden: (id: EntityId) => void;
   readonly onDelete: (id: EntityId) => void;
+  readonly onAddAngleExpression: (formula: string, ast: ExpressionNode) => void;
 }
 
 export function ObjectPanel({
@@ -103,6 +134,7 @@ export function ObjectPanel({
   onSetColor,
   onToggleHidden,
   onDelete,
+  onAddAngleExpression,
 }: Props) {
   const { t } = useI18n();
   const names = pointNames(construction);
@@ -136,6 +168,7 @@ export function ObjectPanel({
           {entities.map((entity) => {
             const Icon = ICONS[entity.kind];
             const selected = entity.id === selectedId;
+            const value = objectValue(entity, construction);
             const vanished =
               (entity.kind === "intersection" || entity.kind === "midpoint") &&
               !entity.exists;
@@ -175,6 +208,7 @@ export function ObjectPanel({
                     {objectLabel(entity, names, t)}
                   </span>
                 </button>
+                {value && <span className="object-value">{value}</span>}
                 <div className="object-actions">
                   <button
                     type="button"
@@ -230,6 +264,12 @@ export function ObjectPanel({
             );
           })}
         </ul>
+      )}
+      {!collapsed && (
+        <ExpressionInput
+          construction={construction}
+          onAdd={onAddAngleExpression}
+        />
       )}
     </aside>
   );
